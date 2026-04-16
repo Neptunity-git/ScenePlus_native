@@ -1,0 +1,710 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>ScenePlus+クリエイター向け利用規約</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+/* Override strong tags inside headings to maintain consistent weight */
+h1 strong,
+h2 strong,
+h3 strong {
+	font-weight: 600;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	gap: 46px;
+}
+
+.column {
+	min-width: 0;
+	overflow: hidden;
+}
+
+.column > *:first-child {
+	margin-top: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(125, 122, 117, 1);
+	fill: rgba(125, 122, 117, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(125, 122, 117, 1);
+	fill: rgba(125, 122, 117, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="32768952-b2db-8098-900f-f849d0141093" class="page sans"><header><h1 class="page-title" dir="auto">ScenePlus+クリエイター向け利用規約</h1><p class="page-description" dir="auto"></p></header><div class="page-body"><div style="display:contents" dir="auto"><p id="32768952-b2db-80e6-9902-e0556248a498" class=""><strong>最終更新日: 2026年3月19日</strong></p></div><div style="display:contents" dir="auto"><p id="32768952-b2db-803e-ba14-ce069e3d8e03" class="">本規約は、ScenePlus+ 開発チーム（以下「当チーム」）が提供する「ScenePlus-SDK.js」および関連するAPI（以下「本SDK」）を利用してエフェクトを制作するすべての開発者（以下「クリエイター」）と当チームとの間の法的契約を定義するものです。</p></div><div style="display:contents" dir="auto"><hr id="32768952-b2db-803b-8f1d-e3decab0af1e"/></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-8052-9bfb-f2fe3cd67174" class="">第1条（同意の擬制）</h2></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-806a-93dd-e785c4fde719" class="bulleted-list"><li style="list-style-type:disc">クリエイターが本SDKを自身のプログラム内にインポート、または本SDKを用いたエフェクトファイルを配布した時点で、本規約の全条項に同意したものとみなされます。</li></ul></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-807a-aba2-cbdd1d298a7c" class="">第2条（定義）</h2></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8050-a07c-db3e0d9c0c99" class="bulleted-list"><li style="list-style-type:disc"><strong>「本アプリ」</strong>: 当チームが提供するサンプラーソフトウェア「ScenePlus+」を指します。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8057-bc98-c8fb411c629a" class="bulleted-list"><li style="list-style-type:disc"><strong>「Codeエフェクト」</strong>: 本アプリ内のiframeサンドボックス上で動作する、HTML/CSS/JSベースの視覚・音声効果プログラムを指します。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8039-a115-ef90bbf91bc7" class="bulleted-list"><li style="list-style-type:disc"><strong>「ユーザー」</strong>: クリエイターが制作したエフェクトを本アプリ上で実行するエンドユーザーを指します。</li></ul></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-808e-b51a-ec658667fda2" class="">第3条（絶対的禁止事項：セキュリティとプライバシー）</h2></div><div style="display:contents" dir="auto"><p id="32768952-b2db-800d-92c8-e7c9af3f34cb" class="">クリエイターは、本SDKおよび本アプリの機能を利用し、以下の行為を行うことを固く禁じます。違反が確認された場合、法的措置の対象となります。</p></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-802c-8df1-e85459e53692" class="numbered-list" start="1"><li><strong>不正なデータ窃取</strong>:<div style="display:contents" dir="auto"><ul id="32768952-b2db-80ce-9a7c-eecc5b4799ca" class="bulleted-list"><li style="list-style-type:disc"><code>captureScreen</code> 機能を用いて、ユーザーの意図しないタイミングで画面情報を取得・記録・外部送信する行為。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-801e-a137-c0c5347b5a78" class="bulleted-list"><li style="list-style-type:disc">クレジットカード番号、暗証番号、個人チャット、ログイン資格情報等の機密情報が含まれる領域を標的としたキャプチャおよび解析行為。</li></ul></div></li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-8070-88a4-eb5fa3bd608f" class="numbered-list" start="2"><li><strong>フィッシング・詐欺行為</strong>:<div style="display:contents" dir="auto"><ul id="32768952-b2db-80ac-94a8-e758cc49ed04" class="bulleted-list"><li style="list-style-type:disc">本アプリのUIやOSのダイアログを模倣し、ユーザーに情報の入力を促すプログラムの組み込み。</li></ul></div></li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-8076-88d6-f9a5c77247d8" class="numbered-list" start="3"><li><strong>サンドボックスの脱獄と悪用</strong>:<div style="display:contents" dir="auto"><ul id="32768952-b2db-8009-a05a-c96a4fb80eff" class="bulleted-list"><li style="list-style-type:disc">本アプリが提供するiframeの隔離環境を意図的に回避し、ユーザーのローカルファイルシステムやメインプロセスへ直接アクセスを試みる行為。</li></ul></div></li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-8052-80e4-de3aae65bcf2" class="numbered-list" start="4"><li><strong>リソースの意図的な枯渇</strong>:<div style="display:contents" dir="auto"><ul id="32768952-b2db-801f-b446-ed0d0af55149" class="bulleted-list"><li style="list-style-type:disc">無限ループや過度なメモリ消費（リーク）を意図的に引き起こし、ユーザーのシステムを停止（DoS攻撃）させる行為。</li></ul></div></li></ol></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-805a-9c00-c83b0120025b" class="">第4条（画面キャプチャ機能の運用ルール）</h2></div><div style="display:contents" dir="auto"><p id="32768952-b2db-806c-a36e-f83e831bd510" class=""><code>captureScreen</code> APIを利用するクリエイターは、以下の義務を負います。</p></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8040-94b1-ca04643b8ba5" class="bulleted-list"><li style="list-style-type:disc"><strong>明示義務</strong>: 配布時のドキュメント（meta.jsonやREADME）に「画面キャプチャ機能を使用する」旨を必ず明記しなければなりません。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-80d7-9cca-fae1decd4d58" class="bulleted-list"><li style="list-style-type:disc"><strong>最小限の原則</strong>: 演出に必要な最小限の解像度および頻度でのみキャプチャを実行し、不必要に高精細なデータを保持してはなりません。</li></ul></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-805c-98f8-fd061c5ac7a4" class="">第5条（権利の帰属とライセンス）</h2></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8084-86f3-dd380c3e15bb" class="bulleted-list"><li style="list-style-type:disc">本SDKに関する著作権および知的財産権は当チームに帰属します。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8081-b538-c41db09a32a0" class="bulleted-list"><li style="list-style-type:disc">クリエイターが本SDKを用いて独自に作成したコードの著作権はクリエイターに帰属しますが、本アプリ内での実行およびデバッグを目的とした利用を無償で許諾するものとします。</li></ul></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-8021-a022-e2154509f8ea" class="">第6条（保証の否認および免責事項）</h2></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-800f-8bf8-fa24fc7ca347" class="bulleted-list"><li style="list-style-type:disc"><strong>無保証</strong>: 本SDKは「現状有姿」で提供され、当チームは本SDKにバグがないこと、または特定の目的に適合することを保証しません。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-80ed-9c5b-c70b1dec0d82" class="bulleted-list"><li style="list-style-type:disc"><strong>損害賠償の制限</strong>: クリエイターが制作したエフェクトに起因してユーザーに生じた損害（データ漏洩、PCの故障等）について、当チームは一切の責任を負いません。すべての責任は当該エフェクトを制作したクリエイターが負うものとします。</li></ul></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-8058-be1e-d4af8333cd11" class="">第7条（違反時の措置）</h2></div><div style="display:contents" dir="auto"><p id="32768952-b2db-8075-af16-f1b307a171b8" class="">当チームは、本規約に違反したクリエイターおよびエフェクトに対し、以下の措置を講じる権利を有します。</p></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-8047-bc2d-d1d7a050bae1" class="numbered-list" start="1"><li><mark class="highlight-red"><strong>ブラックリスト登録</strong></mark><mark class="highlight-red">: 当該エフェクトをアプリ内で実行不能にする措置（キルスイッチの発動）。</mark></li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-8026-8cc4-de4f0cf15aaf" class="numbered-list" start="2"><li><mark class="highlight-red"><strong>公開の停止</strong></mark><mark class="highlight-red">: 公式ライブラリ等からの削除。</mark></li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="32768952-b2db-80e2-814f-e131e30ad605" class="numbered-list" start="3"><li><mark class="highlight-red"><strong>法的対応</strong></mark><mark class="highlight-red">: 悪質な情報窃取が確認された場合、関係当局への通報および刑事告訴、民事訴訟（損害賠償請求）を行います。</mark></li></ol></div><div style="display:contents" dir="auto"><h2 id="32768952-b2db-8043-82c2-fa6fad95cb61" class="">第8条（準拠法と管轄裁判所）</h2></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-8003-bc5d-e2d89970fe0b" class="bulleted-list"><li style="list-style-type:disc">本規約の解釈および適用は、日本法に準拠します。</li></ul></div><div style="display:contents" dir="auto"><ul id="32768952-b2db-80db-8952-f3629e50f896" class="bulleted-list"><li style="list-style-type:disc">本規約に関連して生じる紛争については、当チームの所在地を管轄する地方裁判所を第一審の専属的合意管轄裁判所とします。</li></ul></div><div style="display:contents" dir="auto"><hr id="32768952-b2db-80e5-a523-c438823f3343"/></div><div style="display:contents" dir="auto"><h3 id="32768952-b2db-8052-8b38-fa276caf9f59" class="">クリエイターへの重要勧告</h3></div><div style="display:contents" dir="auto"><blockquote id="32768952-b2db-804e-8ae9-f23278dc8809" class=""><strong>「あなたのコードは、ユーザーの『視線』そのものです。」</strong><div style="display:contents" dir="auto"><p id="32768952-b2db-8068-af04-f3bb0c514463" class="">ScenePlus+ SDKは、デスクトップという極めてプライベートな空間をクリエイティブなキャンバスに変えるためのツールです。その力は、正しく使えば芸術になりますが、誤って使えば凶器になります。本規約は、自由な表現を制限するためのものではなく、プラットフォーム全体の安全と信頼を守るための「聖域」を定義するものです。</p></div></blockquote></div></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

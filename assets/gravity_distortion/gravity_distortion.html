@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="scene://_core/ScenePlus-SDK.js"></script>
+<style>
+  body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+  let active = false;
+  let releasing = false;
+  let fadeAlpha = 1.0;
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Real-time mouse position
+  let cx = 0, cy = 0;
+  // Screenshot cache
+  let currentImg = null;
+
+  ScenePlus.onInit((meta, env) => {
+    active = true;
+    canvas.width = env.screenSize.width;
+    canvas.height = env.screenSize.height;
+    captureBackground();
+    requestAnimationFrame(renderLoop);
+  });
+
+  function captureBackground() {
+    if (!active) return;
+    ScenePlus.captureScreen('mid', (dataUrl, err) => {
+        if (!err && dataUrl) {
+            const img = new Image();
+            img.onload = () => { currentImg = img; };
+            img.src = dataUrl;
+        }
+    });
+  }
+
+  function renderLoop() {
+    if (!active) return;
+    
+    // Get latest mouse coords via SDK
+    const m = ScenePlus.getMousePosition();
+    cx += (m.x - cx) * 0.2; // Smooth folllow
+    cy += (m.y - cy) * 0.2;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = fadeAlpha;
+
+    if (currentImg) {
+        // Draw distorted area (simplified "magnifying" lens effect)
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        
+        // Draw the zoomed screenshot inside the circle
+        ctx.drawImage(currentImg, 
+            cx - 75, cy - 75, 150, 150, // Source region
+            cx - 150, cy - 150, 300, 300 // Dest region
+        );
+        ctx.restore();
+
+        // Outline
+        ctx.beginPath();
+        ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(57, 255, 20, ${fadeAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+
+    if (releasing) {
+        fadeAlpha -= 0.05;
+        if (fadeAlpha <= 0) {
+            active = false;
+            ScenePlus.finish(); // Self-terminate
+            return;
+        }
+    }
+
+    requestAnimationFrame(renderLoop);
+  }
+
+  // Gracefully handle release
+  ScenePlus.onRelease(() => {
+    releasing = true;
+  });
+
+  ScenePlus.onPanic(() => {
+    active = false;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="scene://_core/ScenePlus-SDK.js"></script>
+<style>
+  body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const SAMPLE_TEXTS = [
+    // --- 盛り上がり・定番顔文字 ---
+    "(ﾟ∀ﾟ)ｷﾀｺﾚ!!", "(ﾟ∀ﾟ)!!", "( ﾟ∀ﾟ)o彡゜", "(*ﾟ∀ﾟ)b",
+    "ヽ(ﾟ∀ﾟ)ﾉ", "ｷﾀ━━━━(ﾟ∀ﾟ)━━━━!!",
+    
+    // --- 驚き・衝撃・( ﾟдﾟ )系 ---
+    "( ﾟдﾟ )", "( ﾟдﾟ)ﾊｯ!", "( ﾟдﾟ)ﾎﾟｶｰﾝ", "Σ(ﾟДﾟ)", "∑(￣□￣;)",
+    
+    // --- 納得・称賛・エモい系 ---
+    "(๑•̀ㅂ•́)و✧",
+    
+    // --- 煽り・シュール・草系 ---
+    "m9(^Д^)", "(´・ω・`)", "┐(´∀｀)┌", "(^o^)ﾉｼ", "（；＾ω＾）", 
+    "( ﾟдﾟ)ﾋﾞﾝﾝﾝ", "工工工ｴｴｴｴｴｴｪｪｪｪｪｪ(ﾟДﾟ)ｪｪｪｪｪｪｴｴｴｴｴｴ工工工",
+    // --- 盛り上がり・草（現場の基本） ---
+    "ｗｗｗ", "wwwwwwwwww","wwwwww", "草", "大草原", "草不可避", "竹", "森", "不可避ｗｗｗ",
+    "８８８８８８８８", "888888888888", "パチパチパチパチ", "拍手喝采","最高裁判所",
+    
+    // --- 驚き・衝撃（リアクション） ---
+    "！？", "！！？", "！！？？！？", "！？！？", "！！", "お？", "おっ？", 
+    "は？天才か？", "えええええええ", "！？！？！？", "まさかの展開", "情報量ｗｗｗ",
+    "( ﾟдﾟ )", "(ﾟ∀ﾟ)ｷﾀｺﾚ!!", "きたああああああ", "いけえええええ",
+    
+    // --- 称賛・評価（神格化） ---
+    "神", "神演出", "神曲", "神展開", "控えめに言って神", "語彙力消失", "語彙力どこいった",
+    "ここ好き", "ここすき", "ここ最高", "鳥肌たった", "センスの塊", "もっと評価されるべき",
+    "職人の技", "完成度高すぎ", "優勝", "圧倒的感謝", "最高かよ", "GJ", "GJ!!",
+    
+    // --- 現場・ライブ感（一体感） ---
+    "テンションMAX", "ぶち上がり", "最高すぎる", "伝説の始まり", "歴史の目撃者", "脳が溶ける", "視覚の暴力",
+    "画面がうるさい（褒め言葉）", "目が足りない", "一生見てられる",
+    
+    // --- 定番・挨拶（ネットスラング） ---
+    "おつ", "おつおつ", "ノシ", "初見です", "わこつ", "今北産業", "ああああああ",
+    "かわいい", "かっこいい", "オシャレすぎ", "スタイリッシュｗｗ", "つよい", "強い（確信）"
+  ];
+
+  const FONT_BASE_SIZE = 26; 
+  const FLOW_DURATION = 5000; // 画面を横切る基本時間
+
+  class Comment {
+    constructor(w, h) {
+      this.active = false;
+      this.finished = false;
+      
+      // --- レア判定 ---
+      // 1%の確率で「下部固定・赤文字」のコマンド風コメントに
+      this.isFixed = Math.random() < 0.01; 
+      
+      this.text = this.isFixed ? "WWWWWWWWWWWWWWWWWWWWWWW" : SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
+      this.isRed = this.isFixed || Math.random() < 0.05;
+      this.isLarge = !this.isFixed && Math.random() > 0.93;
+
+      this.fontSize = this.isLarge ? FONT_BASE_SIZE * 2 : FONT_BASE_SIZE;
+      ctx.font = `bold ${this.fontSize}px "Hiragino Kaku Gothic ProN", "MS PGothic", sans-serif`;
+      this.width = ctx.measureText(this.text).width;
+
+      // --- 出現タイミング ---
+      this.delay = Math.random() * 2500;
+      this.startTime = performance.now() + this.delay;
+      this.lifeTime = 3000; // 固定コメントの表示時間
+
+      if (this.isFixed) {
+        // 下部中央
+        this.x = (w - this.width) / 2;
+        this.y = h - 60;
+        this.speed = 0;
+      } else {
+        // 右から左へ（上部70%のエリアに配置）
+        this.x = w;
+        this.y = (Math.random() * h * 0.7) + 30;
+        // 【計算式】(画面幅 + 文字幅) / フレーム数 = 常に一定時間(4秒)で通り過ぎる
+        // これにより、長い文字ほど速く動く
+        this.speed = (w + this.width) / (FLOW_DURATION / 16.6);
+      }
+    }
+
+    update(now) {
+      if (now < this.startTime) return;
+      this.active = true;
+
+      if (this.isFixed) {
+        if (now > this.startTime + this.lifeTime) {
+          this.active = false;
+          this.finished = true;
+        }
+      } else {
+        this.x -= this.speed;
+        if (this.x + this.width < 0) {
+          this.active = false;
+          this.finished = true;
+        }
+      }
+    }
+
+    draw() {
+      if (!this.active) return;
+      ctx.font = `bold ${this.fontSize}px sans-serif`;
+      
+      // フチ取り
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.lineWidth = 4;
+      ctx.strokeText(this.text, this.x, this.y);
+
+      // 色設定
+      ctx.fillStyle = this.isRed ? '#FF0000' : '#FFFFFF';
+      ctx.fillText(this.text, this.x, this.y);
+    }
+  }
+
+  let comments = [];
+  let isRunning = false;
+
+  ScenePlus.onInit((meta, env) => {
+    canvas.width = env.screenSize.width;
+    canvas.height = env.screenSize.height;
+    
+    // 2〜15個のコメント
+    const count = Math.floor(Math.random() * 14) + 2;
+    for (let i = 0; i < count; i++) {
+      comments.push(new Comment(canvas.width, canvas.height));
+    }
+    
+    isRunning = true;
+    requestAnimationFrame(render);
+  });
+
+  function render(now) {
+    if (!isRunning) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    let allFinished = true;
+    comments.forEach(c => {
+      c.update(now);
+      c.draw();
+      if (!c.finished) allFinished = false;
+    });
+
+    if (allFinished) {
+      isRunning = false;
+      ScenePlus.finish(); 
+    } else {
+      requestAnimationFrame(render);
+    }
+  }
+
+  ScenePlus.onPanic(() => isRunning = false);
+</script>
+</body>
+</html>

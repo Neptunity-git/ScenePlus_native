@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>ScenePlus+</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+
+  <!-- Empty layer that covers screen for 'Off' text -->
+  <div id="off-indicator" class="hidden">OFF</div>
+  <div id="sync-indicator" class="hidden">SYNCING...</div>
+
+  <!-- Settings Panel (F9 to toggle) -->
+  <div id="settings-panel" class="hidden">
+
+    <!-- UPPER HALF: Controls & Virtual Keyboard -->
+    <section class="cyber-upper">
+
+      <!-- Header: Presets only -->
+      <div class="cyber-controls">
+        <div class="cyber-presets">
+          <button class="cyber-btn preset active">PRESET 1</button>
+          <button class="cyber-btn preset">PRESET 2</button>
+          <button class="cyber-btn preset">PRESET 3</button>
+          <button class="cyber-btn preset">PRESET 4</button>
+          <button class="cyber-btn preset">PRESET 5</button>
+          <button class="cyber-btn preset">PRESET 6</button>
+          <button class="cyber-btn preset">PRESET 7</button>
+        </div>
+      </div>
+
+      <!-- Keyboard row: [mode-info] [sidebar] [keyboard] [sidebar] [console] -->
+      <div class="cyber-keyboard-wrapper">
+
+        <!-- Far Left: Mode Info Panel -->
+        <div class="cyber-panel mode-info-panel" id="mode-info-panel">
+          <div class="cyber-panel-title">MODE INFO</div>
+          <div class="cyber-panel-body" id="mode-info-body">
+            <p class="mode-info-hint">Neutral Mode.
+              Pressing the key triggers the effect.</p>
+          </div>
+        </div>
+
+        <!-- Left sidebar: Mode tabs -->
+        <div class="cyber-sidebar left">
+          <button class="cyber-btn tab active" data-mode="neutral">NEUTRAL</button>
+          <button class="cyber-btn tab" data-mode="send">SEND</button>
+          <button class="cyber-btn tab" data-mode="receive">RECEIVE</button>
+        </div>
+
+        <!-- Center: Virtual Keyboard -->
+        <div id="keyboard-grid">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Right sidebar: Actions -->
+        <div class="cyber-sidebar right">
+          <button class="cyber-btn icon" title="Details / Settings">&#9881; CONFIG</button>
+          <button class="cyber-btn danger" id="btn-clear-keys">PURGE KEYS</button>
+          <button class="cyber-btn danger" id="btn-exit-app">EXIT APP</button>
+        </div>
+
+        <!-- Far Right: Console Log Panel -->
+        <div class="cyber-panel console-panel">
+          <div class="cyber-panel-title">SYSTEM LOG</div>
+          <div class="cyber-panel-body" id="console-log">
+            <!-- Log entries appended here by JS -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LOWER HALF: Effect Library (largest element) -->
+    <section class="cyber-lower">
+      <div class="cyber-library-toolbar">
+        <input type="text" id="library-search-input" class="cyber-input" placeholder="SEARCH DATABANKS...">
+
+        <div class="cyber-filters">
+          <select class="cyber-select" id="filter-media">
+            <option value="all">ANY MEDIA</option>
+            <option value="image">IMAGE</option>
+            <option value="video">VIDEO</option>
+            <option value="sound">SOUND</option>
+            <option value="code">CODE</option>
+          </select>
+          <select class="cyber-select" id="filter-mode">
+            <option value="all">ANY MODE</option>
+            <option value="once">ONCE</option>
+            <option value="loop">LOOP</option>
+            <option value="hold">HOLD</option>
+          </select>
+        </div>
+
+        <button class="cyber-btn accent" id="btn-add-effect">+ ADD FX</button>
+      </div>
+
+      <div id="library-grid" class="drop-zone cyber-grid">
+        <!-- Effect cards will be appended here -->
+      </div>
+    </section>
+
+    <!-- Background Import Overlay (Phase 2.6) -->
+    <div id="import-overlay" class="cyber-modal-overlay hidden">
+      <div class="cyber-modal compact">
+        <div class="cyber-modal-header">
+          <h3>SYSTEM IMPORT IN PROGRESS</h3>
+        </div>
+        <div class="cyber-modal-body centered">
+          <p id="import-status-text">INITIALizing DATA STREAM...</p>
+          <div class="cyber-progress-container">
+            <div id="import-progress-bar" class="cyber-progress-bar" style="width: 0%"></div>
+          </div>
+          <p id="import-percent-text">0%</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Main Canvas for effects -->
+  <div id="engine-canvas">
+    <!-- Effect elements (image/video/iframe) will be injected here dynamically -->
+  </div>
+
+  <!-- Config Modal Overlay -->
+  <div id="config-modal" class="cyber-modal-overlay hidden">
+    <div class="cyber-modal">
+      <div class="cyber-modal-header">
+        <h3>SYSTEM CONFIGURATION</h3>
+        <button id="btn-close-config" class="cyber-btn icon">&times;</button>
+      </div>
+      <div class="cyber-modal-body">
+
+        <div class="config-section">
+          <h4>ENGINE SETTINGS</h4>
+          <label>
+            Maximum Concurrent Effects (N)
+            <input type="number" id="config-max-n" min="1" max="20" class="cyber-input short">
+          </label>
+        </div>
+
+        <div class="config-section">
+          <h4>GLOBAL KEYBINDS</h4>
+          <label>
+            Engine Toggle Key (Default: F8)
+            <select id="config-key-engine" class="cyber-select">
+              <!-- F1 to F12 generated by JS -->
+            </select>
+          </label>
+          <label>
+            Settings Toggle Key (Default: F9)
+            <select id="config-key-settings" class="cyber-select">
+              <!-- F1 to F12 generated by JS -->
+            </select>
+          </label>
+        </div>
+
+        <div class="config-section">
+          <h4>NETWORK SYNC MODE</h4>
+          <label>
+            Asset Auto-Sync
+            <select id="config-sync-mode" class="cyber-select">
+              <option value="full">Mode A: Full Sync (Save to Disk)</option>
+              <option value="guest">Mode B: Guest Sync (Temp Delete on Exit)</option>
+              <option value="streaming" selected>Mode C: Streaming (No Download)</option>
+            </select>
+          </label>
+          <p id="config-sync-warning"
+            style="font-size: 0.8rem; color: var(--neon-red); margin-top: 5px; margin-bottom: 0;">
+            ※ SDKを使用した高度なCodeエフェクトはストリーミングでは動作しません。事前ダウンロード（A/B）を推奨します。
+          </p>
+        </div>
+
+        <div class="config-section">
+          <h4>PRESET RENAMING (Max 10 chars)</h4>
+          <div class="preset-name-grid" id="preset-name-grid">
+            <!-- 8 Inputs generated by JS -->
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h4>OFFICIAL DOCUMENTS</h4>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="btn-doc-guide" class="cyber-btn" title="Creator Guide" style="flex: 1; font-size: 0.65rem; padding: 10px 0;">CREATOR GUIDE</button>
+            <button id="btn-doc-tos-user" class="cyber-btn" title="User Terms" style="flex: 1; font-size: 0.65rem; padding: 10px 0;">USER ToS</button>
+            <button id="btn-doc-tos-creator" class="cyber-btn" title="Creator Terms" style="flex: 1; font-size: 0.65rem; padding: 10px 0;">CREATOR ToS</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="cyber-modal-footer">
+        <button id="btn-save-config" class="cyber-btn accent">SAVE & APPLY</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagnostic Recovery Modal (Phase 2.8) -->
+  <div id="diagnostic-modal" class="cyber-modal-overlay hidden">
+    <div class="cyber-modal">
+      <div class="cyber-modal-header">
+        <h3 id="diag-title">IMPORT DIAGNOSTIC</h3>
+        <button id="btn-close-diag" class="cyber-btn icon">&times;</button>
+      </div>
+      <div class="cyber-modal-body">
+        <p id="diag-error-msg" style="color: var(--neon-red); font-weight: bold;"></p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Please save the following content as <strong>meta.json</strong> in your archive:
+        </p>
+        <textarea id="diag-template-area" class="cyber-input" readonly rows="10"
+          style="width: 100%; font-family: monospace; font-size: 0.8rem; background: #000; color: #39ff14;"></textarea>
+      </div>
+      <div class="cyber-modal-footer">
+        <button id="btn-copy-diag" class="cyber-btn accent">COPY TO CLIPBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js" type="module"></script>
+</body>
+
+</html>

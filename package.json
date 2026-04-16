@@ -1,0 +1,51 @@
+{
+  "name": "sceneplus",
+  "version": "1.0.0",
+  "description": "Visual effect sampler for creatives and beginners",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "keywords": [
+    "effect",
+    "sampler",
+    "electron"
+  ],
+  "author": "Neo_Neptunity",
+  "license": "ISC",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "node-osc": "^11.3.0",
+    "uiohook-napi": "^1.5.4",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "electron": "^41.0.2",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.sceneplus.app",
+    "productName": "ScenePlus+",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "license": "assets/license.txt",
+      "include": "build/installer.nsh"
+    }
+  }
+}
