@@ -1,0 +1,11 @@
+root = true
+
+[*.{js,ts,html,css,sh,md}]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{js,ts,py,html,css}]
+indent_style = space
+indent_size = 4
+
