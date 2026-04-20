@@ -1,0 +1,18 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    rebase-strategy: "disabled"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "npm:"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    rebase-strategy: "disabled"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "gh-action:"
