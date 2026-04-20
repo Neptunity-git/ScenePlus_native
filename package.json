@@ -17,7 +17,7 @@
   "dependencies": {
     "adm-zip": "^0.5.16",
     "node-osc": "^11.3.0",
-    "uiohook-napi": "^1.5.4",
+    "uiohook-napi": "^1.5.5",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
