@@ -461,6 +461,7 @@ body {
 /* --- LOWER HALF (60%) --- */
 .cyber-lower {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 20px 30px;
@@ -537,8 +538,9 @@ body {
 /* 4xN Grid - scrollable, no scrollbar */
 .cyber-grid {
   flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-rows: min-content;
   grid-gap: 15px;
   overflow-y: scroll;
@@ -567,6 +569,7 @@ body {
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid rgba(20, 250, 200, 0.3);
   padding: 12px 15px;
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
