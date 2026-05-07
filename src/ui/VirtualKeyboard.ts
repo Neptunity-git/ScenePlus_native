@@ -1,4 +1,5 @@
-// Mapping basic keys to uiohook KeyCodes for demonstration
+import { EffectManager } from '../engine/EffectManager';
+
 const KEY_ROWS = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -6,7 +7,7 @@ const KEY_ROWS = [
     ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
 ];
 
-export const APP_KEYS_TO_UIOHOOK = {
+export const APP_KEYS_TO_UIOHOOK: Record<string, number> = {
     '1': 2, '2': 3, '3': 4, '4': 5, '5': 6, '6': 7, '7': 8, '8': 9, '9': 10, '0': 11,
     'Q': 16, 'W': 17, 'E': 18, 'R': 19, 'T': 20, 'Y': 21, 'U': 22, 'I': 23, 'O': 24, 'P': 25,
     'A': 30, 'S': 31, 'D': 32, 'F': 33, 'G': 34, 'H': 35, 'J': 36, 'K': 37, 'L': 38,
@@ -14,23 +15,30 @@ export const APP_KEYS_TO_UIOHOOK = {
 };
 
 export class VirtualKeyboard {
-    constructor(containerId, effectManager) {
-        this.container = document.getElementById(containerId);
+    private container: HTMLElement;
+    private effectManager: EffectManager;
+    private keyElements: Record<number, { btn: HTMLElement; badge: HTMLElement }>;
+    private _activePopup: HTMLElement | null = null;
+    
+    public onAssignmentChanged?: () => void;
+
+    constructor(containerId: string, effectManager: EffectManager) {
+        const c = document.getElementById(containerId);
+        if (!c) throw new Error(`Container ${containerId} not found`);
+        this.container = c;
         this.effectManager = effectManager;
         this.keyElements = {};
-        this._activePopup = null;
 
         this.renderKeyboard();
 
-        // Close popup when clicking outside
-        document.addEventListener('click', (e) => {
-            if (this._activePopup && !this._activePopup.contains(e.target)) {
+        document.addEventListener('click', (e: MouseEvent) => {
+            if (this._activePopup && !this._activePopup.contains(e.target as Node)) {
                 this.dismissPopup();
             }
         }, true);
     }
 
-    renderKeyboard() {
+    private renderKeyboard() {
         this.container.innerHTML = '';
 
         KEY_ROWS.forEach(rowKeys => {
@@ -45,16 +53,14 @@ export class VirtualKeyboard {
                 btn.className = 'key-btn';
                 btn.textContent = char;
 
-                // Badge for showing number of assignments
                 const badge = document.createElement('div');
                 badge.className = 'key-badge hidden';
                 badge.textContent = '0';
                 btn.appendChild(badge);
 
-                // Drag-and-drop: accept effect cards from the library
                 btn.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    if (!e.dataTransfer.types.includes('Files')) {
+                    if (e.dataTransfer && !e.dataTransfer.types.includes('Files')) {
                         btn.classList.add('drag-over');
                     }
                 });
@@ -64,7 +70,7 @@ export class VirtualKeyboard {
                 btn.addEventListener('drop', (e) => {
                     e.preventDefault();
                     btn.classList.remove('drag-over');
-                    if (!e.dataTransfer.types.includes('Files')) {
+                    if (e.dataTransfer && !e.dataTransfer.types.includes('Files')) {
                         const effectId = e.dataTransfer.getData('text/plain');
                         if (effectId) {
                             this.assignEffect(uiohookCode, effectId);
@@ -72,7 +78,6 @@ export class VirtualKeyboard {
                     }
                 });
 
-                // Click: open assignment management popup
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this._openPopup(uiohookCode, btn);
@@ -86,13 +91,10 @@ export class VirtualKeyboard {
         });
     }
 
-    // ---- Popup: show current assignments, allow per-effect removal ----
-
-    _openPopup(keyCode, anchorBtn) {
-        // Close any existing popup first
+    private _openPopup(keyCode: number, anchorBtn: HTMLElement) {
         this.dismissPopup();
 
-        const assignments = [...(this.effectManager.keyBindings[keyCode] || [])];
+        const assignments = [...(this.effectManager.keyBindings[keyCode.toString()] || [])];
 
         const popup = document.createElement('div');
         popup.className = 'key-popup';
@@ -123,10 +125,8 @@ export class VirtualKeyboard {
                 removeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.removeEffect(keyCode, effectId);
-                    // Refresh popup in place
                     this.dismissPopup();
                     this._openPopup(keyCode, anchorBtn);
-                    // Notify persistence
                     this.onAssignmentChanged?.();
                 });
 
@@ -136,7 +136,6 @@ export class VirtualKeyboard {
             });
         }
 
-        // Position popup above/below key button
         const rect = anchorBtn.getBoundingClientRect();
         popup.style.position = 'fixed';
         popup.style.left = `${rect.left}px`;
@@ -146,24 +145,23 @@ export class VirtualKeyboard {
         this._activePopup = popup;
     }
 
-    dismissPopup() {
+    public dismissPopup() {
         if (this._activePopup) {
             this._activePopup.remove();
             this._activePopup = null;
         }
     }
 
-    _codeToChar(keyCode) {
+    private _codeToChar(keyCode: number): string {
         for (const [char, code] of Object.entries(APP_KEYS_TO_UIOHOOK)) {
             if (code === keyCode) return char;
         }
         return String(keyCode);
     }
 
-    // ---- Assignment Management ----
-
-    assignEffect(keyCode, effectId) {
-        const existing = this.effectManager.keyBindings[keyCode] || [];
+    public assignEffect(keyCode: number, effectId: string) {
+        const keyStr = keyCode.toString();
+        const existing = this.effectManager.keyBindings[keyStr] || [];
         if (!existing.includes(effectId)) {
             existing.push(effectId);
             this.effectManager.bindKey(keyCode, existing);
@@ -172,31 +170,34 @@ export class VirtualKeyboard {
         }
     }
 
-    removeEffect(keyCode, effectId) {
-        const existing = this.effectManager.keyBindings[keyCode] || [];
+    public removeEffect(keyCode: number, effectId: string) {
+        const keyStr = keyCode.toString();
+        const existing = this.effectManager.keyBindings[keyStr] || [];
         const updated = existing.filter(id => id !== effectId);
         this.effectManager.bindKey(keyCode, updated);
         this.updateBadge(keyCode);
     }
 
-    clearAllInternal() {
-        Object.keys(this.effectManager.keyBindings).forEach(keyCode => {
+    private clearAllInternal() {
+        Object.keys(this.effectManager.keyBindings).forEach(keyCodeStr => {
+            const keyCode = parseInt(keyCodeStr, 10);
             this.effectManager.bindKey(keyCode, []);
             this.updateBadge(keyCode);
         });
     }
 
-    clearAll() {
+    public clearAll() {
         this.clearAllInternal();
         this.onAssignmentChanged?.();
     }
 
-    updateBadge(keyCode) {
+    public updateBadge(keyCode: number) {
         const el = this.keyElements[keyCode];
         if (!el) return;
-        const count = (this.effectManager.keyBindings[keyCode] || []).length;
+        const keyStr = keyCode.toString();
+        const count = (this.effectManager.keyBindings[keyStr] || []).length;
         if (count > 0) {
-            el.badge.textContent = count;
+            el.badge.textContent = count.toString();
             el.badge.classList.remove('hidden');
         } else {
             el.badge.classList.add('hidden');

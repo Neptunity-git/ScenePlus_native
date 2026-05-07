@@ -1,0 +1,64 @@
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
+import { AppState, ImportResult, NetworkInterfaceInfo, CaptureResult, ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from './shared/types';
+
+export const api = {
+    // State & key events from main process
+    onStateChanged: (callback: (state: AppState) => void) => ipcRenderer.on('state-changed', (_event, value) => callback(value)),
+    onPanic: (callback: () => void) => ipcRenderer.on('panic', () => callback()),
+    onKeyDown: (callback: (keycode: number) => void) => ipcRenderer.on('keydown', (_event, keycode) => callback(keycode)),
+    onKeyUp: (callback: (keycode: number) => void) => ipcRenderer.on('keyup', (_event, keycode) => callback(keycode)),
+    onMouseMove: (callback: (pos: { x: number; y: number }) => void) => ipcRenderer.on('mousemove', (_event, pos) => callback(pos)),
+
+    // Effect management
+    unpackEffect: (buffer: ArrayBuffer, effectId: string): Promise<{success: boolean; meta?: any; effectId?: string; basePath?: string; error?: string}> => ipcRenderer.invoke('unpack-effect', buffer, effectId),
+    importEffectBackground: (sourcePath: string, customDestOrIsGuest?: string | boolean): Promise<ImportResult> => ipcRenderer.invoke('import-effect-background', sourcePath, customDestOrIsGuest),
+    openDocument: (docName: string) => ipcRenderer.invoke('open-document', docName),
+    deleteEffect: (effectId: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('delete-effect', effectId),
+    scanEffects: (): Promise<{success: boolean; effects?: any[]; error?: string}> => ipcRenderer.invoke('scan-effects'),
+    captureScreen: (resolution: string): Promise<CaptureResult> => ipcRenderer.invoke('capture-screen', resolution),
+
+    // Listeners for progress
+    onImportProgress: (callback: (percent: number) => void) => ipcRenderer.on('import-progress', (_event, value) => callback(value)),
+    onImportStatus: (callback: (message: string) => void) => ipcRenderer.on('import-status', (_event, message) => callback(message)),
+
+    // File picker
+    openFileDialog: (): Promise<{canceled: boolean; files: string[]}> => ipcRenderer.invoke('open-file-dialog'),
+
+    // Persistence & Settings
+    setSystemKeys: (engineCode?: number, settingsCode?: number): Promise<{success: boolean}> => ipcRenderer.invoke('set-system-keys', engineCode, settingsCode),
+    saveSettings: (settings: SettingsConfig): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('save-settings', settings),
+    loadSettings: (): Promise<{success: boolean; settings: SettingsConfig | null; error?: string}> => ipcRenderer.invoke('load-settings'),
+
+    // Async Dialogs
+    confirmDialog: (options: ConfirmDialogOptions): Promise<boolean> => ipcRenderer.invoke('confirm-dialog', options),
+    alertDialog: (options: AlertDialogOptions): Promise<void> => ipcRenderer.invoke('alert-dialog', options),
+
+    // OSC Networking
+    getLocalIp: (): Promise<string> => ipcRenderer.invoke('get-local-ip'),
+    getAllLocalIps: (): Promise<NetworkInterfaceInfo[]> => ipcRenderer.invoke('get-all-local-ips'),
+    startOscServer: (): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('start-osc-server'),
+    stopOscServer: (): Promise<{success: boolean}> => ipcRenderer.invoke('stop-osc-server'),
+    sendOsc: (targetIp: string, address: string, args: any[]): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('send-osc', targetIp, address, args),
+    scanSubnet: (): Promise<{success: boolean; subnets?: string[]; error?: string}> => ipcRenderer.invoke('scan-subnet'),
+    onOscMessage: (callback: (msg: any) => void) => ipcRenderer.on('osc-message', (_event, msg) => callback(msg)),
+
+    // HTTP Sync & Streaming
+    startHttpServer: (): Promise<{success: boolean; port?: number; error?: string}> => ipcRenderer.invoke('start-http-server'),
+    stopHttpServer: (): Promise<{success: boolean}> => ipcRenderer.invoke('stop-http-server'),
+    downloadAsset: (url: string, hash: string): Promise<string | null> => ipcRenderer.invoke('download-asset', url, hash),
+
+    // WebUtils for path resolution (Electron 28+)
+    getPathForFile: (file: File): string => {
+        return webUtils.getPathForFile(file);
+    }
+};
+
+contextBridge.exposeInMainWorld('api', api);
+
+// Declare the window property for TypeScript
+declare global {
+    interface Window {
+        api: typeof api;
+        currentMousePos: { x: number; y: number };
+    }
+}

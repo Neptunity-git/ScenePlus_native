@@ -1,26 +1,41 @@
-/**
- * Manages the UI Settings Modal (F-keys, Max N, Preset Names)
- */
 export class ConfigModal {
-    constructor(persistence) {
+    private persistence: any;
+    private modal: HTMLElement;
+    private btnClose: HTMLElement;
+    private btnSave: HTMLElement;
+    
+    private inputMaxN: HTMLInputElement;
+    private selectKeyEngine: HTMLSelectElement;
+    private selectKeySettings: HTMLSelectElement;
+    private selectSyncMode: HTMLSelectElement;
+    private syncWarning: HTMLElement;
+    private presetNameGrid: HTMLElement;
+
+    private btnDocGuide: HTMLElement;
+    private btnDocTosUser: HTMLElement;
+    private btnDocTosCreator: HTMLElement;
+
+    private fKeys: { name: string; code: number }[];
+
+    public onConfigSaved?: (presetNames: Record<number, string>) => void;
+
+    constructor(persistence: any) {
         this.persistence = persistence;
-        this.modal = document.getElementById('config-modal');
-        this.btnClose = document.getElementById('btn-close-config');
-        this.btnSave = document.getElementById('btn-save-config');
+        this.modal = document.getElementById('config-modal') as HTMLElement;
+        this.btnClose = document.getElementById('btn-close-config') as HTMLElement;
+        this.btnSave = document.getElementById('btn-save-config') as HTMLElement;
         
-        this.inputMaxN = document.getElementById('config-max-n');
-        this.selectKeyEngine = document.getElementById('config-key-engine');
-        this.selectKeySettings = document.getElementById('config-key-settings');
-        this.selectSyncMode = document.getElementById('config-sync-mode');
-        this.syncWarning = document.getElementById('config-sync-warning');
-        this.presetNameGrid = document.getElementById('preset-name-grid');
+        this.inputMaxN = document.getElementById('config-max-n') as HTMLInputElement;
+        this.selectKeyEngine = document.getElementById('config-key-engine') as HTMLSelectElement;
+        this.selectKeySettings = document.getElementById('config-key-settings') as HTMLSelectElement;
+        this.selectSyncMode = document.getElementById('config-sync-mode') as HTMLSelectElement;
+        this.syncWarning = document.getElementById('config-sync-warning') as HTMLElement;
+        this.presetNameGrid = document.getElementById('preset-name-grid') as HTMLElement;
 
-        // Document Buttons
-        this.btnDocGuide = document.getElementById('btn-doc-guide');
-        this.btnDocTosUser = document.getElementById('btn-doc-tos-user');
-        this.btnDocTosCreator = document.getElementById('btn-doc-tos-creator');
+        this.btnDocGuide = document.getElementById('btn-doc-guide') as HTMLElement;
+        this.btnDocTosUser = document.getElementById('btn-doc-tos-user') as HTMLElement;
+        this.btnDocTosCreator = document.getElementById('btn-doc-tos-creator') as HTMLElement;
 
-        // UIOHook F-key mappings (F1 to F12)
         this.fKeys = [
             { name: 'F1', code: 59 }, { name: 'F2', code: 60 },
             { name: 'F3', code: 61 }, { name: 'F4', code: 62 },
@@ -34,8 +49,7 @@ export class ConfigModal {
         this.bindEvents();
     }
 
-    initUI() {
-        // Populate F-Key dropdowns
+    private initUI() {
         let optionsHtml = '';
         this.fKeys.forEach(fk => {
             optionsHtml += `<option value="${fk.code}">${fk.name}</option>`;
@@ -43,20 +57,18 @@ export class ConfigModal {
         this.selectKeyEngine.innerHTML = optionsHtml;
         this.selectKeySettings.innerHTML = optionsHtml;
 
-        // Populate Preset Rename Inputs
         this.presetNameGrid.innerHTML = '';
         for (let i = 1; i <= 7; i++) {
             const input = document.createElement('input');
             input.type = 'text';
             input.maxLength = 10;
             input.className = 'cyber-input';
-            input.dataset.index = i;
+            input.dataset.index = i.toString();
             this.presetNameGrid.appendChild(input);
         }
     }
 
-    bindEvents() {
-        // We open the modal from renderer.js via open()
+    private bindEvents() {
         this.btnClose.addEventListener('click', () => this.close());
         
         this.btnSave.addEventListener('click', () => {
@@ -69,7 +81,6 @@ export class ConfigModal {
             });
         }
 
-        // Bind Document Buttons
         if (this.btnDocGuide) {
             this.btnDocGuide.addEventListener('click', () => {
                 window.api.openDocument('Official_Guide_For_Creators.html');
@@ -87,7 +98,7 @@ export class ConfigModal {
         }
     }
 
-    updateSyncWarning() {
+    private updateSyncWarning() {
         if (!this.selectSyncMode || !this.syncWarning) return;
         if (this.selectSyncMode.value === 'streaming') {
             this.syncWarning.style.display = 'block';
@@ -96,17 +107,15 @@ export class ConfigModal {
         }
     }
 
-    open(networkMode = 'neutral') {
+    public open(networkMode = 'neutral') {
         const state = this.persistence.state;
         
-        // Load current state into inputs
-        this.inputMaxN.value = state.maxN || 5;
-        this.selectKeyEngine.value = state.engineKey || 66; // F8 fallback
-        this.selectKeySettings.value = state.settingsKey || 67; // F9 fallback
+        this.inputMaxN.value = (state.maxN || 5).toString();
+        this.selectKeyEngine.value = (state.engineKey || 66).toString();
+        this.selectKeySettings.value = (state.settingsKey || 67).toString();
         if (this.selectSyncMode) {
             this.selectSyncMode.value = state.syncMode || 'streaming';
             
-            // Phase 4.2 Fix: Lock sync mode if network is active to prevent inconsistencies
             if (networkMode !== 'neutral') {
                 this.selectSyncMode.disabled = true;
                 this.selectSyncMode.title = "Cannot change sync mode while network is active";
@@ -120,19 +129,18 @@ export class ConfigModal {
 
         const inputs = this.presetNameGrid.querySelectorAll('input');
         inputs.forEach(input => {
-            const idx = input.dataset.index;
+            const idx = input.dataset.index as string;
             input.value = state.presetNames[idx] || `PRESET ${idx}`;
         });
 
         this.modal.classList.remove('hidden');
     }
 
-    close() {
+    public close() {
         this.modal.classList.add('hidden');
     }
 
-    async saveAndApply() {
-        // 1. Validation
+    private async saveAndApply() {
         const engineKey = parseInt(this.selectKeyEngine.value, 10);
         const settingsKey = parseInt(this.selectKeySettings.value, 10);
         
@@ -147,17 +155,15 @@ export class ConfigModal {
         let maxN = parseInt(this.inputMaxN.value, 10);
         if (isNaN(maxN) || maxN < 1) maxN = 1;
 
-        // 2. Gather names
-        const presetNames = {};
+        const presetNames: Record<string, string> = {};
         const inputs = this.presetNameGrid.querySelectorAll('input');
         inputs.forEach(input => {
-            const idx = input.dataset.index;
+            const idx = input.dataset.index as string;
             let val = input.value.trim();
             if (!val) val = `PRESET ${idx}`;
             presetNames[idx] = val;
         });
 
-        // 3. Save via persistence
         this.persistence.updateConfig({
             maxN,
             engineKey,
@@ -166,7 +172,6 @@ export class ConfigModal {
             presetNames
         });
 
-        // 4. Fire callback to tell renderer to update the sticky header UI
         if (this.onConfigSaved) {
             this.onConfigSaved(presetNames);
         }

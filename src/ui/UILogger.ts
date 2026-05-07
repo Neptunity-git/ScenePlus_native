@@ -1,28 +1,24 @@
-import { APP_KEYS_TO_UIOHOOK } from './VirtualKeyboard.js';
+import { APP_KEYS_TO_UIOHOOK } from './VirtualKeyboard';
 
-// Logging helper — writes to the on-screen SYSTEM LOG panel
 const MAX_LOG_ENTRIES = 50;
 
-function padded(n) {
+function padded(n: number): string {
     return String(n).padStart(2, '0');
 }
 
-function timestamp() {
+function timestamp(): string {
     const d = new Date();
     return `${padded(d.getHours())}:${padded(d.getMinutes())}:${padded(d.getSeconds())}`;
 }
 
-/**
- * Converts a uIOHook KeyCode to a readable character if found in the main map.
- */
-export function getKeyLabel(keyCode) {
+export function getKeyLabel(keyCode: number): string {
     for (const [char, code] of Object.entries(APP_KEYS_TO_UIOHOOK)) {
         if (code === keyCode) return char;
     }
     return String(keyCode);
 }
 
-export function uiLog(message, type = 'default') {
+export function uiLog(message: string, type: string = 'default'): void {
     const container = document.getElementById('console-log');
     if (!container) return;
 
@@ -37,40 +33,37 @@ export function uiLog(message, type = 'default') {
     const text = document.createTextNode(message);
     entry.appendChild(text);
 
-    // Append so newest is at the bottom
     container.appendChild(entry);
 
-    // Auto-scroll to bottom
     const panelBody = container.parentElement;
-    panelBody.scrollTop = panelBody.scrollHeight;
+    if (panelBody) {
+        panelBody.scrollTop = panelBody.scrollHeight;
+    }
 
-    // Trim old entries from the top
     while (container.children.length > MAX_LOG_ENTRIES) {
-        container.removeChild(container.firstChild);
+        if (container.firstChild) container.removeChild(container.firstChild);
     }
 }
 
-export function markLogUnread() {
+export function markLogUnread(): void {
     const container = document.getElementById('console-log');
     if (!container) return;
 
-    // Remove any existing unread separator first (we only want one "point of focus")
     const existing = container.querySelector('.log-unread-separator');
     if (existing) existing.remove();
 
-    // Append the separator at the current bottom
     const sep = document.createElement('div');
     sep.className = 'log-unread-separator';
     sep.textContent = '--- UNREAD ---';
     container.appendChild(sep);
 
-    // Auto-scroll to show the separator at the bottom
     const panelBody = container.parentElement;
-    panelBody.scrollTop = panelBody.scrollHeight;
+    if (panelBody) {
+        panelBody.scrollTop = panelBody.scrollHeight;
+    }
 }
 
-// ---- Mode Info Panel ----
-const MODE_INFO = {
+const MODE_INFO: Record<string, string> = {
     neutral: `<p class="mode-info-hint">NEUTRAL MODE.\nPress keys to trigger assigned effects.</p>`,
     send: `
         <p class="mode-info-hint">TRANSMIT MODE.<br>Find receivers on LAN.</p>
@@ -95,7 +88,7 @@ const MODE_INFO = {
         </div>`
 };
 
-export function setupModeInfoPanel(onModeSwitch) {
+export function setupModeInfoPanel(onModeSwitch?: (mode: string) => void): void {
     const body = document.getElementById('mode-info-body');
     if (!body) return;
 
@@ -103,15 +96,12 @@ export function setupModeInfoPanel(onModeSwitch) {
         btn.addEventListener('click', () => {
             if (btn.classList.contains('active')) return;
 
-            // Update active state
             document.querySelectorAll('.cyber-btn.tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            // Update mode info panel
-            const mode = btn.dataset.mode || 'neutral';
+            const mode = (btn as HTMLElement).dataset.mode || 'neutral';
             body.innerHTML = MODE_INFO[mode] || '';
 
-            // Notify renderer
             if (onModeSwitch) onModeSwitch(mode);
         });
     });

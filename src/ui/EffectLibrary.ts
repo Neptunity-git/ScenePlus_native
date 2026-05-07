@@ -1,23 +1,30 @@
-export class EffectLibrary {
-    constructor(containerId, effectManager) {
-        this.container = document.getElementById(containerId);
-        this.effectManager = effectManager;
-        this.allEffects = []; // { effectId, meta, card }
+import { EffectManager } from '../engine/EffectManager';
+import { EffectMeta } from '../shared/types';
 
-        // Filter state
-        this._filterMedia = 'all';
-        this._filterMode = 'all';
-        this._filterSearch = '';
+export class EffectLibrary {
+    public container: HTMLElement;
+    private effectManager: EffectManager;
+    public allEffects: { effectId: string; meta: EffectMeta; card: HTMLElement }[] = [];
+
+    private _filterMedia: string = 'all';
+    private _filterMode: string = 'all';
+    private _filterSearch: string = '';
+
+    constructor(containerId: string, effectManager: EffectManager) {
+        const c = document.getElementById(containerId);
+        if (!c) throw new Error(`Container ${containerId} not found`);
+        this.container = c;
+        this.effectManager = effectManager;
 
         this._setupFileDropZone();
         this._setupFilterControls();
     }
 
-    _setupFileDropZone() {
+    private _setupFileDropZone() {
         this.container.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (e.dataTransfer.types.includes('Files')) {
+            if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
                 this.container.classList.add('drag-over');
             }
         });
@@ -29,10 +36,10 @@ export class EffectLibrary {
         });
     }
 
-    _setupFilterControls() {
-        const mediaSelect = document.getElementById('filter-media');
-        const modeSelect = document.getElementById('filter-mode');
-        const searchInput = document.getElementById('library-search-input');
+    private _setupFilterControls() {
+        const mediaSelect = document.getElementById('filter-media') as HTMLSelectElement;
+        const modeSelect = document.getElementById('filter-mode') as HTMLSelectElement;
+        const searchInput = document.getElementById('library-search-input') as HTMLInputElement;
 
         if (mediaSelect) {
             mediaSelect.addEventListener('change', () => {
@@ -54,7 +61,7 @@ export class EffectLibrary {
         }
     }
 
-    _applyFilters() {
+    public _applyFilters() {
         for (const { effectId, meta, card } of this.allEffects) {
             const matchMedia = this._filterMedia === 'all' || meta.mediatype === this._filterMedia;
             const matchMode = this._filterMode === 'all' || meta.playmode === this._filterMode;
@@ -66,13 +73,12 @@ export class EffectLibrary {
         }
     }
 
-    addCard(effectId, meta) {
+    public addCard(effectId: string, meta: EffectMeta) {
         const card = document.createElement('div');
         card.className = 'effect-card';
         card.draggable = true;
         card.dataset.effectId = effectId;
 
-        // Display name
         let displayName = this.effectManager.effectNames?.[effectId] || effectId;
 
         const titleEl = document.createElement('div');
@@ -90,24 +96,21 @@ export class EffectLibrary {
         playBtn.className = 'card-play-btn';
         playBtn.innerHTML = '▶';
 
-        // Enforced 3-second preview (Task 5: all modes stopped unconditionally at 3s)
         playBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const player = this.effectManager.players[effectId];
             if (!player) return;
 
-            // Temporarily disable onended so we stay in control
             const instance = player.play();
             if (!instance) return;
-            if (instance.el && instance.el.onended) instance.el.onended = null;
+            if (instance.el && (instance.el as any).onended) (instance.el as any).onended = null;
 
             const stopTimer = setTimeout(() => {
                 player.stopInstance(instance);
             }, 3000);
 
-            // If it ends naturally before 3s, clear the timeout
             if (instance.el && (meta.mediatype === 'video' || meta.mediatype === 'sound')) {
-                instance.el.onended = () => {
+                (instance.el as HTMLMediaElement).onended = () => {
                     clearTimeout(stopTimer);
                     player.stopInstance(instance);
                 };
@@ -130,7 +133,6 @@ export class EffectLibrary {
             });
 
             if (ok) {
-                // VERY IMPORTANT: Destroy the player first to release Windows file locks on the media!
                 const targetPlayer = this.effectManager.players[effectId];
                 if (targetPlayer && typeof targetPlayer.destroy === 'function') {
                     targetPlayer.destroy();
@@ -157,10 +159,11 @@ export class EffectLibrary {
         card.appendChild(titleEl);
         card.appendChild(actionsEl);
 
-        // Drag to assign to key
         card.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', effectId);
-            e.dataTransfer.effectAllowed = 'copyMove';
+            if (e.dataTransfer) {
+                e.dataTransfer.setData('text/plain', effectId);
+                e.dataTransfer.effectAllowed = 'copyMove';
+            }
             card.style.opacity = '0.5';
         });
         card.addEventListener('dragend', () => {

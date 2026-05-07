@@ -1,17 +1,17 @@
-import { EffectManager } from './engine/EffectManager.js';
-import { VirtualKeyboard } from './ui/VirtualKeyboard.js';
-import { EffectLibrary } from './ui/EffectLibrary.js';
-import { PersistenceManager } from './ui/PersistenceManager.js';
-import { ConfigModal } from './ui/ConfigModal.js';
-import { uiLog, setupModeInfoPanel, markLogUnread, getKeyLabel } from './ui/UILogger.js';
+import { EffectManager } from './engine/EffectManager';
+import { VirtualKeyboard } from './ui/VirtualKeyboard';
+import { EffectLibrary } from './ui/EffectLibrary';
+import { PersistenceManager } from './ui/PersistenceManager';
+import { ConfigModal } from './ui/ConfigModal';
+import { uiLog, setupModeInfoPanel, markLogUnread, getKeyLabel } from './ui/UILogger';
 
-const diagModal = document.getElementById('diagnostic-modal');
-const diagErrorMsg = document.getElementById('diag-error-msg');
-const diagTemplateArea = document.getElementById('diag-template-area');
-const btnCloseDiag = document.getElementById('btn-close-diag');
-const btnCopyDiag = document.getElementById('btn-copy-diag');
+const diagModal = document.getElementById('diagnostic-modal') as HTMLElement;
+const diagErrorMsg = document.getElementById('diag-error-msg') as HTMLElement;
+const diagTemplateArea = document.getElementById('diag-template-area') as HTMLTextAreaElement;
+const btnCloseDiag = document.getElementById('btn-close-diag') as HTMLElement;
+const btnCopyDiag = document.getElementById('btn-copy-diag') as HTMLElement;
 
-const indicatorSync = document.getElementById('sync-indicator');
+const indicatorSync = document.getElementById('sync-indicator') as HTMLElement;
 let activeSyncCount = 0;
 
 const effectManager = new EffectManager(5);
@@ -20,30 +20,27 @@ const effectLibrary = new EffectLibrary('library-grid', effectManager);
 const persistence = new PersistenceManager(effectManager, effectLibrary, virtualKeyboard);
 const configModal = new ConfigModal(persistence);
 
-const offIndicator = document.getElementById('off-indicator');
-const settingsPanel = document.getElementById('settings-panel');
-const libraryGrid = document.getElementById('library-grid');
-const btnAddEffect = document.getElementById('btn-add-effect');
+const offIndicator = document.getElementById('off-indicator') as HTMLElement;
+const settingsPanel = document.getElementById('settings-panel') as HTMLElement;
+const libraryGrid = document.getElementById('library-grid') as HTMLElement;
+const btnAddEffect = document.getElementById('btn-add-effect') as HTMLElement;
 
-// Phase 2.6: Background Import UI
-const importOverlay = document.getElementById('import-overlay');
-const importBar = document.getElementById('import-progress-bar');
-const importStatusText = document.getElementById('import-status-text');
-const importPercentText = document.getElementById('import-percent-text');
+const importOverlay = document.getElementById('import-overlay') as HTMLElement;
+const importBar = document.getElementById('import-progress-bar') as HTMLElement;
+const importStatusText = document.getElementById('import-status-text') as HTMLElement;
+const importPercentText = document.getElementById('import-percent-text') as HTMLElement;
 let isImporting = false;
 
-// --- Initialize mode info panel tab switching ---
 let currentNetworkMode = 'neutral';
 let activeTargetIp = '';
-let activeHttpPort = 0; // The port SENDER listens on for HTTP
+let activeHttpPort = 0;
 let pendingTargetIp = '';
-let pingTimeoutId = null;
+let pingTimeoutId: any = null;
 
-let uplinkIp = '';
-let uplinkHttpPort = 0;
-let receivedConnections = new Map(); // Phase 4.2 Fix: Track multiple simultaneous connections
+let discoveredDevices: string[] = [];
+let receivedConnections = new Map<string, {port: number, lastSeen: number}>();
 
-setupModeInfoPanel(async (mode) => {
+setupModeInfoPanel(async (mode: string) => {
     currentNetworkMode = mode;
     activeTargetIp = ''; 
     pendingTargetIp = '';
@@ -51,7 +48,6 @@ setupModeInfoPanel(async (mode) => {
     if (pingTimeoutId) clearTimeout(pingTimeoutId);
     pingTimeoutId = null;
     
-    // Start OSC server for BOTH Network modes (for ping/pong handshakes)
     if (mode === 'neutral') {
         await window.api.stopOscServer();
         await window.api.stopHttpServer();
@@ -63,7 +59,7 @@ setupModeInfoPanel(async (mode) => {
         
         if (mode === 'send') {
             const httpRes = await window.api.startHttpServer();
-            if (httpRes.success) {
+            if (httpRes.success && httpRes.port) {
                 activeHttpPort = httpRes.port;
             } else {
                 uiLog(`Failed to start HTTP server: ${httpRes.error}`, 'error');
@@ -74,7 +70,6 @@ setupModeInfoPanel(async (mode) => {
     }
     
     if (mode === 'receive') {
-        // Fetch ALL local IPs and display them
         const allIps = await window.api.getAllLocalIps();
         const ipListEl = document.getElementById('osc-local-ip-list');
         if (ipListEl) {
@@ -97,7 +92,7 @@ setupModeInfoPanel(async (mode) => {
             devs.style.color = 'var(--text-muted)';
             devs.style.textShadow = 'none';
         }
-        receivedConnections.clear(); // Clear tracking on mode enter
+        receivedConnections.clear();
         
         uiLog('RECEIVE MODE: Listening on port 8000', 'import');
     } else if (mode === 'send') {
@@ -106,9 +101,8 @@ setupModeInfoPanel(async (mode) => {
         const btnScan = document.getElementById('btn-osc-scan');
         const deviceList = document.getElementById('osc-device-list');
         const btnConnect = document.getElementById('btn-osc-connect');
-        const inputIp = document.getElementById('osc-target-ip');
+        const inputIp = document.getElementById('osc-target-ip') as HTMLInputElement;
         
-        // --- SCAN button logic ---
         if (btnScan && deviceList) {
             btnScan.addEventListener('click', async () => {
                 btnScan.textContent = 'SCANNING...';
@@ -123,7 +117,6 @@ setupModeInfoPanel(async (mode) => {
                     uiLog(`Scanning ${result.subnets.length} subnet(s): ${result.subnets.join(', ')}`, 'default');
                 }
                 
-                // Wait 2 seconds for responses
                 setTimeout(() => {
                     btnScan.textContent = 'SCAN NETWORK';
                     btnScan.style.color = '';
@@ -138,7 +131,6 @@ setupModeInfoPanel(async (mode) => {
             });
         }
         
-        // --- Manual CONNECT button logic ---
         if (btnConnect && inputIp) {
             const doConnect = () => {
                 let ipStr = inputIp.value.trim();
@@ -165,8 +157,7 @@ setupModeInfoPanel(async (mode) => {
     }
 });
 
-// --- Helper: attempt ping/pong handshake ---
-function attemptConnection(ip, btn) {
+function attemptConnection(ip: string, btn: HTMLElement | null) {
     pendingTargetIp = ip;
     if (btn) {
         btn.textContent = 'CONNECTING...';
@@ -188,9 +179,7 @@ function attemptConnection(ip, btn) {
     }, 2000);
 }
 
-// --- Helper: add a discovered device to the UI list ---
-let discoveredDevices = [];
-function addDiscoveredDevice(ip) {
+function addDiscoveredDevice(ip: string) {
     if (discoveredDevices.includes(ip)) return;
     discoveredDevices.push(ip);
     
@@ -215,7 +204,6 @@ function addDiscoveredDevice(ip) {
     deviceList.appendChild(item);
 }
 
-// --- Helper: Update the multi-device UI in RECEIVE mode ---
 function refreshConnectedDevicesUI() {
     const devs = document.getElementById('osc-connected-devices');
     if (!devs) return;
@@ -233,16 +221,14 @@ function refreshConnectedDevicesUI() {
     devs.style.textShadow = '0 0 5px var(--neon-green)';
 }
 
-// --- Restore previously imported effects + key bindings from disk ---
 persistence.restore().then(() => {
     uiLog('Session restored from disk.', 'import');
     refreshPresetNamesUI(persistence.state.presetNames);
-}).catch(err => {
+}).catch((err: any) => {
     uiLog(`Restore failed: ${err.message}`, 'error');
 });
 
-// --- Wire Config Modal ---
-configModal.onConfigSaved = (newNames) => {
+configModal.onConfigSaved = (newNames: Record<number, string>) => {
     refreshPresetNamesUI(newNames);
     uiLog('Global System Configuration Saved', 'default');
 };
@@ -256,11 +242,13 @@ function updateSyncIndicator() {
     }
 }
 
-document.querySelector('.cyber-btn.icon').addEventListener('click', () => {
-    configModal.open(currentNetworkMode);
-});
+const configBtn = document.querySelector('.cyber-btn.icon');
+if (configBtn) {
+    configBtn.addEventListener('click', () => {
+        configModal.open(currentNetworkMode);
+    });
+}
 
-// --- Wire Preset Buttons ---
 const presetBtns = document.querySelectorAll('.cyber-btn.preset');
 presetBtns.forEach((btn, idx) => {
     btn.addEventListener('click', () => {
@@ -269,31 +257,26 @@ presetBtns.forEach((btn, idx) => {
     });
 });
 
-function refreshPresetNamesUI(namesObj) {
+function refreshPresetNamesUI(namesObj: Record<string, string>) {
     if (!namesObj) return;
     presetBtns.forEach((btn, idx) => {
-        const i = idx + 1;
+        const i = (idx + 1).toString();
         if (namesObj[i]) btn.textContent = namesObj[i];
     });
 }
 
-// --- Wire assignment changes to auto-save ---
 virtualKeyboard.onAssignmentChanged = () => persistence.save();
 
-// --- State events from main process ---
 let lastSettingsOpen = false;
 window.api.onStateChanged((state) => {
-    // Phase 4.2 Fix: Always dismiss sub-popups/modals when toggled
     if (configModal) configModal.close();
     if (virtualKeyboard) virtualKeyboard.dismissPopup();
-    if (diagModal) diagModal.classList.add('hidden'); // Also clear diagnostic modal if open
+    if (diagModal) diagModal.classList.add('hidden');
 
     if (state.settingsOpen) {
         settingsPanel.classList.remove('hidden');
-        // Refresh library filter state on open to ensure internal sync
         effectLibrary._applyFilters();
     } else {
-        // ONLY mark as unread if it was JUST closed
         if (lastSettingsOpen) {
             markLogUnread();
         }
@@ -308,11 +291,9 @@ window.api.onStateChanged((state) => {
     }
 });
 
-// --- Phase 2.9: Level 2 API Message Routing ---
 window.currentMousePos = { x: 0, y: 0 };
 window.api.onMouseMove((pos) => {
     window.currentMousePos = pos;
-    // Broadcast to all active iframes
     document.querySelectorAll('iframe').forEach(ifr => {
        if (ifr.contentWindow) {
            ifr.contentWindow.postMessage({ source: 'sceneplus-engine', type: 'mousemove', pos }, '*');
@@ -325,13 +306,11 @@ window.addEventListener('message', async (e) => {
     if (!msg || msg.source !== 'sceneplus-effect') return;
 
     if (msg.type === 'finish') {
-        // The effect is self-terminating, hard stop it
         const players = Object.values(effectManager.players);
         for (const p of players) {
             for (const inst of p.pool) {
-                if (inst.el.contentWindow === e.source) {
+                if ((inst.el as HTMLIFrameElement).contentWindow === e.source) {
                     p.hardStopInstance(inst);
-                    // Clean up activeGroups array of dead entries
                     effectManager.activeGroups.forEach(g => {
                         g.entries = g.entries.filter(en => en.instance.active);
                     });
@@ -340,19 +319,19 @@ window.addEventListener('message', async (e) => {
             }
         }
     } else if (msg.type === 'capture') {
-        // Route capture request to main process
         const result = await window.api.captureScreen(msg.resolution);
-        e.source.postMessage({
-            source: 'sceneplus-engine',
-            type: 'capture-response',
-            id: msg.id,
-            dataUrl: result.dataUrl,
-            error: result.error
-        }, '*');
+        if (e.source) {
+            (e.source as Window).postMessage({
+                source: 'sceneplus-engine',
+                type: 'capture-response',
+                id: msg.id,
+                dataUrl: result.dataUrl,
+                error: result.error
+            }, '*');
+        }
     }
 });
 
-// --- Phase 2.6: Background Progress Listeners ---
 window.api.onImportProgress((percent) => {
     if (importBar) importBar.style.width = `${percent}%`;
     if (importPercentText) importPercentText.textContent = `${percent}%`;
@@ -373,9 +352,9 @@ window.api.onPanic(() => {
 });
 
 window.api.onKeyDown((keycode) => {
-    const effectIds = effectManager.keyBindings[keycode] || [];
+    const keyStr = keycode.toString();
+    const effectIds = effectManager.keyBindings[keyStr] || [];
 
-    // Only fire locally if not in RECEIVE mode
     if (currentNetworkMode !== 'receive') {
         effectManager.triggerDown(keycode);
     }
@@ -400,7 +379,8 @@ window.api.onKeyDown((keycode) => {
 });
 
 window.api.onKeyUp((keycode) => {
-    const effectIds = effectManager.keyBindings[keycode] || [];
+    const keyStr = keycode.toString();
+    const effectIds = effectManager.keyBindings[keyStr] || [];
 
     if (currentNetworkMode !== 'receive') {
         effectManager.triggerUp(keycode);
@@ -413,13 +393,10 @@ window.api.onKeyUp((keycode) => {
     }
 });
 
-// --- Phase 4.1: OSC Message Receiver ---
-window.api.onOscMessage(async (msg) => {
-    // 1. Send Mode handles Pongs and Announces
+window.api.onOscMessage(async (msg: any) => {
     if (currentNetworkMode === 'send') {
         if (msg.address === '/sceneplus/sys/pong') {
             const responderIp = msg.rinfo?.address;
-            console.log(`[PONG DEBUG] responderIp='${responderIp}' pendingTargetIp='${pendingTargetIp}'`);
             if (pendingTargetIp) {
                 clearTimeout(pingTimeoutId);
                 pingTimeoutId = null;
@@ -445,14 +422,12 @@ window.api.onOscMessage(async (msg) => {
         return;
     }
 
-    // 2. Receive Mode handles Pings, Discover, and Commands
     if (currentNetworkMode !== 'receive') return;
     
     if (msg.address === '/sceneplus/sys/discover') {
         const senderIp = msg.rinfo?.address || 'unknown';
         if (senderIp !== 'unknown') {
             window.api.sendOsc(senderIp, '/sceneplus/sys/announce', []);
-            console.log(`[DISCOVER] Responded to discover from ${senderIp}`);
         }
         return;
     }
@@ -465,15 +440,14 @@ window.api.onOscMessage(async (msg) => {
             window.api.sendOsc(senderIp, '/sceneplus/sys/pong', []);
         }
 
-        // Phase 4.2 Optimization: Only trigger sync if this is a NEW connection
         if (!receivedConnections.has(senderIp)) {
             uiLog(`[RX] ◀ NEW LINK ESTABLISHED: ${senderIp}:${senderHttpPort}`, 'import');
             receivedConnections.set(senderIp, { port: senderHttpPort, lastSeen: Date.now() });
             syncAssetsWithUplink(senderIp, senderHttpPort);
             refreshConnectedDevicesUI();
         } else {
-            // Just update lastSeen, skip heavy sync
-            receivedConnections.get(senderIp).lastSeen = Date.now();
+            const conn = receivedConnections.get(senderIp);
+            if (conn) conn.lastSeen = Date.now();
         }
         return;
     }
@@ -495,9 +469,8 @@ window.api.onOscMessage(async (msg) => {
     }
 });
 
-// --- Phase 4.2: Asset Auto-Sync Orchestration ---
-async function syncAssetsWithUplink(ip, port) {
-    const syncMode = persistence.state.syncMode || 'streaming'; // 'full', 'guest', 'streaming'
+async function syncAssetsWithUplink(ip: string, port: number) {
+    const syncMode = persistence.state.syncMode || 'streaming';
     
     activeSyncCount++;
     updateSyncIndicator();
@@ -512,28 +485,23 @@ async function syncAssetsWithUplink(ip, port) {
         let streamedCount = 0;
         let blockedCount = 0;
 
-        // Compute delta and handle Streaming mounts
         for (const remote of remoteAssets) {
             const hash = remote.effectId;
             const meta = remote.meta;
 
             if (!effectManager.players[hash]) {
                 if (syncMode === 'streaming') {
-                    // Block SDK effects to prevent iframe origin security issues
                     if (meta.usesSDK) {
-                        console.warn(`[OSC-RX] ⚠ Blocked SDK Effect: ${meta.name}`);
                         uiLog(`[OSC-RX] ⚠ Blocked: SDK Effects require Mode A/B (${meta.name})`, 'error');
                         blockedCount++;
                     } else {
-                        // Dynamically mount missing effect via HTTP stream!
                         const streamingBasePath = `http://${ip}:${port}/stream/${hash}/`;
                         effectManager.registerEffect(hash, meta, streamingBasePath);
                         
-                        // Phase 4.2 Fix: Store display name so addCard() uses it instead of hash
                         effectManager.effectNames = effectManager.effectNames || {};
                         effectManager.effectNames[hash] = meta.name || hash;
                         
-                        effectLibrary.addCard(hash, meta); // Add UI card for the remote effect
+                        effectLibrary.addCard(hash, meta);
                         streamedCount++;
                     }
                 } else {
@@ -563,14 +531,12 @@ async function syncAssetsWithUplink(ip, port) {
             
             const tempFile = await window.api.downloadAsset(dlUrl, hash);
             if (tempFile) {
-                // Determine destination directory for extraction
                 const isGuest = (syncMode === 'guest');
                 
                 const result = await window.api.importEffectBackground(tempFile, isGuest);
-                if (result.success) {
+                if (result.success && result.meta && result.basePath && result.hash) {
                     effectManager.registerEffect(result.hash, result.meta, result.basePath);
                     
-                    // Phase 4.2 Fix: Store display name so addCard() uses it instead of hash
                     effectManager.effectNames = effectManager.effectNames || {};
                     effectManager.effectNames[result.hash] = result.meta.name || result.hash;
                     
@@ -583,7 +549,7 @@ async function syncAssetsWithUplink(ip, port) {
         }
         
         uiLog(`[SYNC] Synchronization complete.`, 'import');
-    } catch (err) {
+    } catch (err: any) {
         uiLog(`[SYNC] Sync failed: ${err.message}`, 'error');
     } finally {
         activeSyncCount--;
@@ -591,20 +557,9 @@ async function syncAssetsWithUplink(ip, port) {
     }
 }
 
-async function hashBuffer(buffer) {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Deprecated: use window.api.importEffectBackground instead
-// async function hashBuffer ...
-
-// --- Helper: process a single scenefx file via background worker ---
-async function importEffect(filePath, fileName) {
+async function importEffect(filePath: string, fileName: string) {
     if (isImporting) return;
     
-    // UI Lock
     isImporting = true;
     importOverlay.classList.remove('hidden');
     importBar.style.width = '0%';
@@ -613,12 +568,10 @@ async function importEffect(filePath, fileName) {
 
     const result = await window.api.importEffectBackground(filePath);
     
-    // UI Unlock
     isImporting = false;
     importOverlay.classList.add('hidden');
 
-    if (result.success) {
-        // Prevent duplicate cards if already loaded (though worker hash check should handle this)
+    if (result.success && result.hash && result.meta && result.basePath) {
         if (effectLibrary.allEffects.some(e => e.effectId === result.hash)) {
              uiLog(`Duplicate effect skipped: ${fileName}`, 'default');
              return;
@@ -633,17 +586,17 @@ async function importEffect(filePath, fileName) {
     } else {
         uiLog(`✘ Import failed: ${fileName}`, 'error');
         if (result.diagnostic) {
-            showDiagnostic(result.error, result.template);
+            showDiagnostic(result.error || 'Unknown Error', result.template || '');
         } else {
             await window.api.alertDialog({ 
                 message: 'Failed to load effect', 
-                detail: result.error 
+                detail: result.error || 'Unknown Error' 
             });
         }
     }
 }
 
-function showDiagnostic(error, template) {
+function showDiagnostic(error: string, template: string) {
     diagErrorMsg.textContent = error;
     diagTemplateArea.value = template;
     diagModal.classList.remove('hidden');
@@ -663,19 +616,16 @@ btnCopyDiag.addEventListener('click', () => {
     }, 2000);
 });
 
-// --- Listen to effect deletion from Library UI ---
-effectLibrary.container.addEventListener('effect-deleted', (e) => {
+effectLibrary.container.addEventListener('effect-deleted', (e: any) => {
     const { effectId } = e.detail;
-    // Clean current bindings in memory
     for (const keyCode in effectManager.keyBindings) {
-        effectManager.keyBindings[keyCode] = effectManager.keyBindings[keyCode].filter(id => id !== effectId);
-        virtualKeyboard.updateBadge(keyCode);
+        effectManager.keyBindings[keyCode] = effectManager.keyBindings[keyCode].filter((id: string) => id !== effectId);
+        virtualKeyboard.updateBadge(parseInt(keyCode, 10));
     }
-    // Clean all presets in state
     if (persistence.state && persistence.state.presets) {
         for (const p in persistence.state.presets) {
             for (const k in persistence.state.presets[p]) {
-                persistence.state.presets[p][k] = persistence.state.presets[p][k].filter(id => id !== effectId);
+                persistence.state.presets[p][k] = persistence.state.presets[p][k].filter((id: string) => id !== effectId);
             }
         }
     }
@@ -683,7 +633,6 @@ effectLibrary.container.addEventListener('effect-deleted', (e) => {
     uiLog(`Effect deleted permanently.`, 'error');
 });
 
-// --- Drag & Drop to library grid (OS file drag) ---
 libraryGrid.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -692,49 +641,53 @@ libraryGrid.addEventListener('dragover', (e) => {
 libraryGrid.addEventListener('drop', async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    libraryGrid.classList.remove('drag-over'); // Clear visual state
-    if (!e.dataTransfer.types.includes('Files')) return;
+    libraryGrid.classList.remove('drag-over');
+    if (e.dataTransfer && !e.dataTransfer.types.includes('Files')) return;
 
-    for (const f of e.dataTransfer.files) {
-        if (f.name.endsWith('.scenefx') || f.name.endsWith('.zip')) {
-            // Use webUtils via preload for modern Electron path resolution
-            const filePath = window.api.getPathForFile(f);
-            await importEffect(filePath, f.name);
+    if (e.dataTransfer) {
+        for (const f of e.dataTransfer.files) {
+            if (f.name.endsWith('.scenefx') || f.name.endsWith('.zip')) {
+                const filePath = window.api.getPathForFile(f);
+                await importEffect(filePath, f.name);
+            }
         }
     }
 });
 
-// --- UPLOAD button: native file dialog ---
 btnAddEffect.addEventListener('click', async () => {
     const result = await window.api.openFileDialog();
     if (result.canceled || !result.files || result.files.length === 0) return;
 
     for (const filePath of result.files) {
-        const fileName = filePath.split(/[\\/]/).pop();
+        const fileName = filePath.split(/[\\/]/).pop() || 'unknown';
         await importEffect(filePath, fileName);
     }
 });
 
-// --- PURGE KEYS ---
-document.getElementById('btn-clear-keys').addEventListener('click', async () => {
-    const ok = await window.api.confirmDialog({
-        message: 'All key assignments will be cleared. Continue?',
-        detail: 'This will reset the current preset bindings.'
+const btnClearKeys = document.getElementById('btn-clear-keys');
+if (btnClearKeys) {
+    btnClearKeys.addEventListener('click', async () => {
+        const ok = await window.api.confirmDialog({
+            message: 'All key assignments will be cleared. Continue?',
+            detail: 'This will reset the current preset bindings.'
+        });
+        if (ok) {
+            virtualKeyboard.clearAll();
+            persistence.save();
+            uiLog('All key assignments cleared.', 'default');
+        }
     });
-    if (ok) {
-        virtualKeyboard.clearAll();
-        persistence.save();
-        uiLog('All key assignments cleared.', 'default');
-    }
-});
+}
 
-// --- EXIT APP ---
-document.getElementById('btn-exit-app').addEventListener('click', async () => {
-    const ok = await window.api.confirmDialog({
-        message: 'Exit ScenePlus+?',
-        detail: 'Make sure your work is saved.'
+const btnExitApp = document.getElementById('btn-exit-app');
+if (btnExitApp) {
+    btnExitApp.addEventListener('click', async () => {
+        const ok = await window.api.confirmDialog({
+            message: 'Exit ScenePlus+?',
+            detail: 'Make sure your work is saved.'
+        });
+        if (ok) {
+            window.close();
+        }
     });
-    if (ok) {
-        window.close();
-    }
-});
+}
