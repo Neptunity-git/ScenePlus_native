@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "electron": "^41.4.0",
-    "electron-builder": "^26.8.1"
+    "electron-builder": "^26.15.2"
   },
   "build": {
     "appId": "com.sceneplus.app",
