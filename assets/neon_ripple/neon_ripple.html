@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="scene://_core/ScenePlus-SDK.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let active = false;
+    let releasing = false;
+    let fadeAlpha = 1.0;
+
+    // Smoothed mouse position
+    let sx = 0, sy = 0;
+
+    // ─── Ripple pool ───
+    const ripples = [];
+    const MAX_RIPPLES = 80;
+
+    function spawnRipple(x, y, maxR, lineWidth, hue, speed, isBurst) {
+      if (ripples.length >= MAX_RIPPLES) return;
+      ripples.push({
+        x, y,
+        r: 0,
+        maxR: maxR,
+        lineWidth: lineWidth,
+        hue: hue,
+        speed: speed,
+        alpha: 1,
+        isBurst: isBurst
+      });
+    }
+
+    // ─── Trail particles ───
+    const particles = [];
+    const MAX_PARTICLES = 120;
+
+    function spawnParticle(x, y, hue) {
+      if (particles.length >= MAX_PARTICLES) return;
+      const angle = Math.random() * Math.PI * 2;
+      const vel = 0.3 + Math.random() * 1.5;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * vel,
+        vy: Math.sin(angle) * vel,
+        size: 2 + Math.random() * 4,
+        hue: hue,
+        alpha: 1,
+        decay: 0.008 + Math.random() * 0.015
+      });
+    }
+
+    // ─── Shockwave (click) ───
+    const shockwaves = [];
+
+    function spawnShockwave(x, y) {
+      shockwaves.push({
+        x, y,
+        r: 0,
+        maxR: 350,
+        alpha: 1,
+        lineWidth: 6
+      });
+      // Also burst a ring of ripples
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 / 12) * i;
+        const dist = 20;
+        const hue = (baseHue + i * 30) % 360;
+        spawnRipple(
+          x + Math.cos(angle) * dist,
+          y + Math.sin(angle) * dist,
+          80 + Math.random() * 60,
+          1.5,
+          hue,
+          3 + Math.random() * 2,
+          true
+        );
+      }
+      // Burst particles
+      for (let i = 0; i < 30; i++) {
+        spawnParticle(x, y, (baseHue + Math.random() * 120) % 360);
+      }
+    }
+
+    let baseHue = 180; // Cycles over time
+    let frameCount = 0;
+    let lastTrailTime = 0;
+
+    // ─── Main Loop ───
+    function renderLoop(timestamp) {
+      if (!active) return;
+
+      frameCount++;
+      baseHue = (baseHue + 0.3) % 360;
+
+      const m = ScenePlus.getMousePosition();
+      sx += (m.x - sx) * 0.15;
+      sy += (m.y - sy) * 0.15;
+
+      // Spawn ambient ripples from mouse position
+      if (frameCount % 6 === 0) {
+        const hue = (baseHue + Math.random() * 60) % 360;
+        spawnRipple(sx, sy, 40 + Math.random() * 80, 1.5, hue, 1.5 + Math.random() * 1.5, false);
+      }
+
+      // Spawn trail particles
+      if (timestamp - lastTrailTime > 30) {
+        lastTrailTime = timestamp;
+        const dx = m.x - sx;
+        const dy = m.y - sy;
+        const speed = Math.sqrt(dx * dx + dy * dy);
+        const count = Math.min(Math.floor(speed * 0.3), 5);
+        for (let i = 0; i < count; i++) {
+          spawnParticle(sx + (Math.random() - 0.5) * 10, sy + (Math.random() - 0.5) * 10, baseHue);
+        }
+      }
+
+      // ─── Clear ───
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = fadeAlpha;
+
+      // ─── Draw & update ripples ───
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.r += rp.speed;
+        rp.alpha = 1 - (rp.r / rp.maxR);
+
+        if (rp.alpha <= 0) {
+          ripples.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(${rp.hue}, 100%, 65%, ${rp.alpha * 0.7})`;
+        ctx.lineWidth = rp.lineWidth * rp.alpha;
+        // Glow effect
+        ctx.shadowColor = `hsla(${rp.hue}, 100%, 60%, ${rp.alpha * 0.5})`;
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // ─── Draw & update shockwaves ───
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.r += 8;
+        sw.alpha = 1 - (sw.r / sw.maxR);
+        sw.lineWidth = 6 * sw.alpha;
+
+        if (sw.alpha <= 0) {
+          shockwaves.splice(i, 1);
+          continue;
+        }
+
+        // Outer ring
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+        const gradient = ctx.createRadialGradient(sw.x, sw.y, sw.r * 0.8, sw.x, sw.y, sw.r);
+        gradient.addColorStop(0, `hsla(${baseHue}, 100%, 70%, 0)`);
+        gradient.addColorStop(1, `hsla(${baseHue}, 100%, 70%, ${sw.alpha * 0.6})`);
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = sw.lineWidth;
+        ctx.shadowColor = `hsla(${baseHue}, 100%, 60%, ${sw.alpha})`;
+        ctx.shadowBlur = 30;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner bright ring
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.r * 0.85, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(${(baseHue + 40) % 360}, 100%, 85%, ${sw.alpha * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // ─── Draw & update particles ───
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.vy += 0.02; // Slight gravity
+        pt.alpha -= pt.decay;
+
+        if (pt.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.size * pt.alpha, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${pt.hue}, 100%, 70%, ${pt.alpha * 0.8})`;
+        ctx.shadowColor = `hsla(${pt.hue}, 100%, 60%, ${pt.alpha})`;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // ─── Cursor glow ───
+      const glowGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 60);
+      glowGrad.addColorStop(0, `hsla(${baseHue}, 100%, 80%, 0.3)`);
+      glowGrad.addColorStop(0.5, `hsla(${baseHue}, 100%, 60%, 0.08)`);
+      glowGrad.addColorStop(1, `hsla(${baseHue}, 100%, 50%, 0)`);
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(sx - 60, sy - 60, 120, 120);
+
+      // ─── Fade out on release ───
+      if (releasing) {
+        fadeAlpha -= 0.03;
+        if (fadeAlpha <= 0) {
+          active = false;
+          ScenePlus.finish();
+          return;
+        }
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // ─── SDK hooks ───
+    ScenePlus.onInit((meta, env) => {
+      active = true;
+      releasing = false;
+      fadeAlpha = 1.0;
+      canvas.width = env.screenSize.width;
+      canvas.height = env.screenSize.height;
+
+      const pos = ScenePlus.getMousePosition();
+      sx = pos.x;
+      sy = pos.y;
+
+      requestAnimationFrame(renderLoop);
+    });
+
+    ScenePlus.onMouseDown((e) => {
+      if (!active || releasing) return;
+      spawnShockwave(e.x, e.y);
+    });
+
+    ScenePlus.onMouseWheel((e) => {
+      if (!active || releasing) return;
+      // Scroll spawns a small vertical burst
+      const dir = e.rotation > 0 ? 1 : -1;
+      for (let i = 0; i < 8; i++) {
+        const hue = (baseHue + i * 20) % 360;
+        spawnRipple(
+          sx + (Math.random() - 0.5) * 40,
+          sy + dir * (10 + Math.random() * 30),
+          30 + Math.random() * 40,
+          1,
+          hue,
+          2 + Math.random(),
+          false
+        );
+      }
+    });
+
+    ScenePlus.onRelease(() => {
+      releasing = true;
+    });
+
+    ScenePlus.onPanic(() => {
+      active = false;
+    });
+  </script>
+</body>
+
+</html>

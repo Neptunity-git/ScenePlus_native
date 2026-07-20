@@ -12,6 +12,17 @@ export class InputManager {
         this.windowManager = windowManager;
     }
 
+    /** Convert screen-level cursor position to window-local coordinates */
+    private getLocalMousePos(): { x: number; y: number } {
+        const pos = screen.getCursorScreenPoint();
+        const win = this.windowManager.getWindow();
+        if (win && !win.isDestroyed()) {
+            const bounds = win.getBounds();
+            return { x: pos.x - bounds.x, y: pos.y - bounds.y };
+        }
+        return pos;
+    }
+
     public startHooks(): void {
         uIOhook.on('keydown', (e) => {
             if (this.pressedKeys.has(e.keycode)) return;
@@ -68,8 +79,47 @@ export class InputManager {
         uIOhook.on('mousemove', (e) => {
             const state = this.windowManager.getState();
             if (state.engineOn && this.windowManager.isAlive()) {
-                const pos = screen.getCursorScreenPoint();
+                const pos = this.getLocalMousePos();
                 this.windowManager.getWindow()?.webContents.send('mousemove', pos);
+            }
+        });
+
+        uIOhook.on('mousedown', (e) => {
+            const state = this.windowManager.getState();
+            if (state.engineOn && this.windowManager.isAlive()) {
+                const pos = this.getLocalMousePos();
+                this.windowManager.getWindow()?.webContents.send('mousedown', {
+                    button: e.button,
+                    x: pos.x,
+                    y: pos.y,
+                    clicks: e.clicks
+                });
+            }
+        });
+
+        uIOhook.on('mouseup', (e) => {
+            const state = this.windowManager.getState();
+            if (state.engineOn && this.windowManager.isAlive()) {
+                const pos = this.getLocalMousePos();
+                this.windowManager.getWindow()?.webContents.send('mouseup', {
+                    button: e.button,
+                    x: pos.x,
+                    y: pos.y
+                });
+            }
+        });
+
+        uIOhook.on('wheel', (e) => {
+            const state = this.windowManager.getState();
+            if (state.engineOn && this.windowManager.isAlive()) {
+                const pos = this.getLocalMousePos();
+                this.windowManager.getWindow()?.webContents.send('mousewheel', {
+                    x: pos.x,
+                    y: pos.y,
+                    amount: e.amount,
+                    direction: e.direction,
+                    rotation: e.rotation
+                });
             }
         });
 

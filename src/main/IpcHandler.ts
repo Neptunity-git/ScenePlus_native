@@ -73,8 +73,9 @@ export class IpcHandler {
                 else if (resolution === 'high') { width = 1920; height = 1080; }
                 else if (resolution === 'full') {
                     const primaryDisplay = screen.getPrimaryDisplay();
-                    width = primaryDisplay.bounds.width;
-                    height = primaryDisplay.bounds.height;
+                    const scaleFactor = primaryDisplay.scaleFactor;
+                    width = Math.round(primaryDisplay.bounds.width * scaleFactor);
+                    height = Math.round(primaryDisplay.bounds.height * scaleFactor);
                 }
                 
                 const sources = await desktopCapturer.getSources({ 

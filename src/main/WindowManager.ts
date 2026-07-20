@@ -62,7 +62,7 @@ export class WindowManager {
         return this.mainWindow !== null && !this.mainWindow.isDestroyed();
     }
 
-    public setState(newState: AppState): void {
+    public setState(newState: Partial<AppState>): void {
         this.state = { ...this.state, ...newState };
         this.updateRendererState();
     }

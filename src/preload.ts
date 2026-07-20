@@ -8,6 +8,9 @@ export const api = {
     onKeyDown: (callback: (keycode: number) => void) => ipcRenderer.on('keydown', (_event, keycode) => callback(keycode)),
     onKeyUp: (callback: (keycode: number) => void) => ipcRenderer.on('keyup', (_event, keycode) => callback(keycode)),
     onMouseMove: (callback: (pos: { x: number; y: number }) => void) => ipcRenderer.on('mousemove', (_event, pos) => callback(pos)),
+    onMouseDown: (callback: (data: { button: number; x: number; y: number; clicks: number }) => void) => ipcRenderer.on('mousedown', (_event, data) => callback(data)),
+    onMouseUp: (callback: (data: { button: number; x: number; y: number }) => void) => ipcRenderer.on('mouseup', (_event, data) => callback(data)),
+    onMouseWheel: (callback: (data: { x: number; y: number; amount: number; direction: number; rotation: number }) => void) => ipcRenderer.on('mousewheel', (_event, data) => callback(data)),
 
     // Effect management
     unpackEffect: (buffer: ArrayBuffer, effectId: string): Promise<{success: boolean; meta?: any; effectId?: string; basePath?: string; error?: string}> => ipcRenderer.invoke('unpack-effect', buffer, effectId),

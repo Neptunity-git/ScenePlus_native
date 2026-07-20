@@ -59,9 +59,13 @@
         ctx.closePath();
         ctx.clip();
         
+        // Calculate the scale factor between the canvas and the captured image
+        const scaleX = currentImg.width / canvas.width;
+        const scaleY = currentImg.height / canvas.height;
+        
         // Draw the zoomed screenshot inside the circle
         ctx.drawImage(currentImg, 
-            cx - 75, cy - 75, 150, 150, // Source region
+            (cx - 75) * scaleX, (cy - 75) * scaleY, 150 * scaleX, 150 * scaleY, // Source region
             cx - 150, cy - 150, 300, 300 // Dest region
         );
         ctx.restore();

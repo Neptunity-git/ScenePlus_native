@@ -9,7 +9,10 @@ window.ScenePlus = (function() {
     const listeners = {
         init: [],
         release: [],
-        panic: []
+        panic: [],
+        mousedown: [],
+        mouseup: [],
+        mousewheel: []
     };
     
     let metaData = {};
@@ -18,6 +21,8 @@ window.ScenePlus = (function() {
         screenSize: { width: 1920, height: 1080 },
         mousePos: { x: 0, y: 0 }
     };
+
+    let heldMouseButtons = new Set();
 
     let captureIdCounter = 0;
     const captureCallbacks = {};
@@ -43,6 +48,34 @@ window.ScenePlus = (function() {
                 break;
             case 'mousemove':
                 systemEnv.mousePos = msg.pos;
+                break;
+            case 'mousedown':
+                heldMouseButtons.add(msg.button);
+                listeners.mousedown.forEach(cb => cb({
+                    button: msg.button,
+                    buttonCode: msg.buttonCode,
+                    x: msg.x,
+                    y: msg.y,
+                    clicks: msg.clicks
+                }));
+                break;
+            case 'mouseup':
+                heldMouseButtons.delete(msg.button);
+                listeners.mouseup.forEach(cb => cb({
+                    button: msg.button,
+                    buttonCode: msg.buttonCode,
+                    x: msg.x,
+                    y: msg.y
+                }));
+                break;
+            case 'mousewheel':
+                listeners.mousewheel.forEach(cb => cb({
+                    x: msg.x,
+                    y: msg.y,
+                    amount: msg.amount,
+                    direction: msg.direction,
+                    rotation: msg.rotation
+                }));
                 break;
             case 'capture-response':
                 if (captureCallbacks[msg.id]) {
@@ -75,6 +108,33 @@ window.ScenePlus = (function() {
         
         // Interactive Info
         getMousePosition: () => systemEnv.mousePos,
+
+        /**
+         * Called when a mouse button is pressed.
+         * @param {function} callback Called with ({ button, buttonCode, x, y, clicks })
+         *   button: 'left' | 'right' | 'middle' | 'side1' | 'side2'
+         *   buttonCode: raw numeric code (1=left, 2=right, 3=middle, 4/5=side)
+         */
+        onMouseDown: (callback) => listeners.mousedown.push(callback),
+
+        /**
+         * Called when a mouse button is released.
+         * @param {function} callback Called with ({ button, buttonCode, x, y })
+         */
+        onMouseUp: (callback) => listeners.mouseup.push(callback),
+
+        /**
+         * Called when the mouse wheel is scrolled.
+         * @param {function} callback Called with ({ x, y, amount, direction, rotation })
+         */
+        onMouseWheel: (callback) => listeners.mousewheel.push(callback),
+
+        /**
+         * Returns a Set of currently held mouse button names.
+         * e.g. Set { 'left', 'right' }
+         * @returns {Set<string>}
+         */
+        getMouseButtons: () => new Set(heldMouseButtons),
 
         /**
          * Request a screenshot of the main monitor.

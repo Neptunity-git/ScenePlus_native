@@ -301,6 +301,59 @@ window.api.onMouseMove((pos) => {
     });
 });
 
+const MOUSE_BUTTON_NAMES: Record<number, string> = {
+    1: 'left', 2: 'right', 3: 'middle', 4: 'side1', 5: 'side2'
+};
+
+window.api.onMouseDown((data) => {
+    const buttonName = MOUSE_BUTTON_NAMES[data.button] || `button${data.button}`;
+    document.querySelectorAll('iframe').forEach(ifr => {
+        if (ifr.contentWindow) {
+            ifr.contentWindow.postMessage({
+                source: 'sceneplus-engine',
+                type: 'mousedown',
+                button: buttonName,
+                buttonCode: data.button,
+                x: data.x,
+                y: data.y,
+                clicks: data.clicks
+            }, '*');
+        }
+    });
+});
+
+window.api.onMouseUp((data) => {
+    const buttonName = MOUSE_BUTTON_NAMES[data.button] || `button${data.button}`;
+    document.querySelectorAll('iframe').forEach(ifr => {
+        if (ifr.contentWindow) {
+            ifr.contentWindow.postMessage({
+                source: 'sceneplus-engine',
+                type: 'mouseup',
+                button: buttonName,
+                buttonCode: data.button,
+                x: data.x,
+                y: data.y
+            }, '*');
+        }
+    });
+});
+
+window.api.onMouseWheel((data) => {
+    document.querySelectorAll('iframe').forEach(ifr => {
+        if (ifr.contentWindow) {
+            ifr.contentWindow.postMessage({
+                source: 'sceneplus-engine',
+                type: 'mousewheel',
+                x: data.x,
+                y: data.y,
+                amount: data.amount,
+                direction: data.direction,
+                rotation: data.rotation
+            }, '*');
+        }
+    });
+});
+
 window.addEventListener('message', async (e) => {
     const msg = e.data;
     if (!msg || msg.source !== 'sceneplus-effect') return;
@@ -645,7 +698,7 @@ libraryGrid.addEventListener('drop', async (e) => {
     if (e.dataTransfer && !e.dataTransfer.types.includes('Files')) return;
 
     if (e.dataTransfer) {
-        for (const f of e.dataTransfer.files) {
+        for (const f of Array.from(e.dataTransfer.files)) {
             if (f.name.endsWith('.scenefx') || f.name.endsWith('.zip')) {
                 const filePath = window.api.getPathForFile(f);
                 await importEffect(filePath, f.name);
