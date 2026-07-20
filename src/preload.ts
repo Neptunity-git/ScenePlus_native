@@ -15,7 +15,8 @@ export const api = {
     // Effect management
     unpackEffect: (buffer: ArrayBuffer, effectId: string): Promise<{success: boolean; meta?: any; effectId?: string; basePath?: string; error?: string}> => ipcRenderer.invoke('unpack-effect', buffer, effectId),
     importEffectBackground: (sourcePath: string, customDestOrIsGuest?: string | boolean): Promise<ImportResult> => ipcRenderer.invoke('import-effect-background', sourcePath, customDestOrIsGuest),
-    openDocument: (docName: string) => ipcRenderer.invoke('open-document', docName),
+    readDoc: (docName: string): Promise<{success: boolean; content?: string; error?: string}> => ipcRenderer.invoke('read-doc', docName),
+    exportDoc: (docName: string, content: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('export-doc', docName, content),
     deleteEffect: (effectId: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('delete-effect', effectId),
     scanEffects: (): Promise<{success: boolean; effects?: any[]; error?: string}> => ipcRenderer.invoke('scan-effects'),
     captureScreen: (resolution: string): Promise<CaptureResult> => ipcRenderer.invoke('capture-screen', resolution),
@@ -31,6 +32,7 @@ export const api = {
     setSystemKeys: (engineCode?: number, settingsCode?: number): Promise<{success: boolean}> => ipcRenderer.invoke('set-system-keys', engineCode, settingsCode),
     saveSettings: (settings: SettingsConfig): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('save-settings', settings),
     loadSettings: (): Promise<{success: boolean; settings: SettingsConfig | null; error?: string}> => ipcRenderer.invoke('load-settings'),
+    setAppState: (state: Partial<AppState>): Promise<{success: boolean}> => ipcRenderer.invoke('set-app-state', state),
 
     // Async Dialogs
     confirmDialog: (options: ConfirmDialogOptions): Promise<boolean> => ipcRenderer.invoke('confirm-dialog', options),

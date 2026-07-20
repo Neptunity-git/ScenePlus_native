@@ -111,6 +111,19 @@ export class PersistenceManager {
         this.save();
     }
 
+    public async loadState(newState?: any) {
+        if (!newState) {
+            return this.restore();
+        }
+        
+        this.state = { ...this.state, ...newState };
+        this.effectManager.maxN = this.state.maxN;
+        if (this.state.engineKey && this.state.settingsKey) {
+            await window.api.setSystemKeys(this.state.engineKey, this.state.settingsKey);
+        }
+        this.switchPreset(this.state.currentPreset, true);
+    }
+
     public async save() {
         this.state.presets[this.state.currentPreset] = { ...this.effectManager.keyBindings };
         await window.api.saveSettings(this.state);

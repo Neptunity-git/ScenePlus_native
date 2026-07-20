@@ -121,10 +121,8 @@
 
   </div>
 
-  <!-- Main Canvas for effects -->
-  <div id="engine-canvas">
-    <!-- Effect elements (image/video/iframe) will be injected here dynamically -->
-  </div>
+  <!-- Global Shared Canvas for Plan B Engine -->
+  <canvas id="global-effects-canvas"></canvas>
 
   <!-- Config Modal Overlay -->
   <div id="config-modal" class="cyber-modal-overlay hidden">
@@ -215,6 +213,25 @@
       </div>
       <div class="cyber-modal-footer">
         <button id="btn-copy-diag" class="cyber-btn accent">COPY TO CLIPBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Docs Viewer Modal -->
+  <div id="docs-modal" class="cyber-modal-overlay hidden">
+    <div class="cyber-modal large">
+      <div class="cyber-modal-header">
+        <h3 id="docs-modal-title">DOCUMENTATION</h3>
+        <button id="btn-close-docs" class="cyber-btn icon">&times;</button>
+      </div>
+      <div class="cyber-modal-body docs-body">
+        <div id="docs-content" class="markdown-body">
+          <!-- Parsed markdown will be injected here -->
+        </div>
+      </div>
+      <div class="cyber-modal-footer">
+        <button id="btn-copy-docs" class="cyber-btn">COPY AS TEXT</button>
+        <button id="btn-export-docs" class="cyber-btn accent">EXPORT AS FILE</button>
       </div>
     </div>
   </div>

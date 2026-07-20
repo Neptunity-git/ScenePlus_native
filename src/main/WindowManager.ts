@@ -24,7 +24,7 @@ export class WindowManager {
             alwaysOnTop: true,
             skipTaskbar: true,
             hasShadow: false,
-            icon: path.join(app.getAppPath(), 'assets/logo_ScenePlus+.ico'),
+            icon: path.join(app.getAppPath(), 'assets/system/logo_ScenePlus+.ico'),
             webPreferences: {
                 preload: path.join(app.getAppPath(), 'out/preload.js'),
                 contextIsolation: true,

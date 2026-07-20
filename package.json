@@ -1,13 +1,13 @@
 {
   "name": "sceneplus",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Visual effect sampler for creatives and beginners",
   "main": "out/main/main.js",
   "scripts": {
     "start": "bun run build && electron .",
     "build": "bun run build:main && bun run build:renderer && bun run build:worker && bun run build:copy",
     "build:main": "bun build ./src/main/main.ts ./src/preload.ts --outdir ./out --target node --format cjs --packages external",
-    "build:renderer": "bun build ./src/renderer.ts --outdir ./out --target browser --packages external",
+    "build:renderer": "bun build ./src/renderer.ts --outdir ./out --target browser",
     "build:worker": "bun build ./src/worker.ts --outdir ./out --target node --format cjs --packages external",
     "build:copy": "node -e \"const fs=require('fs'); fs.mkdirSync('out', {recursive:true}); fs.copyFileSync('src/index.html', 'out/index.html'); fs.copyFileSync('src/index.css', 'out/index.css');\"",
     "build:ts": "bun run build",
@@ -22,6 +22,7 @@
   "license": "ISC",
   "dependencies": {
     "adm-zip": "^0.5.17",
+    "marked": "^18.0.6",
     "node-osc": "^11.4.0",
     "uiohook-napi": "^1.5.4",
     "uuid": "^14.0.0"
@@ -45,18 +46,19 @@
     "files": [
       "out/**/*",
       "assets/**/*",
+      "node_modules/**/*",
       "package.json"
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.png"
+      "icon": "assets/system/icon.png"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "license": "assets/license.txt",
+      "license": "assets/docs/license.txt",
       "include": "build/installer.nsh"
     }
   }

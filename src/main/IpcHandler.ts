@@ -5,7 +5,7 @@ import { WindowManager } from './WindowManager';
 import { NetworkService } from './services/NetworkService';
 import { EffectService } from './services/EffectService';
 import { InputManager } from './InputManager';
-import { ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from '../shared/types';
+import { ConfirmDialogOptions, AlertDialogOptions, SettingsConfig, AppState } from '../shared/types';
 
 export class IpcHandler {
     constructor(
@@ -130,27 +130,33 @@ export class IpcHandler {
         });
 
         // --- Documents Viewer ---
-        ipcMain.handle('open-document', async (event, docName) => {
-            const docPath = path.join(app.getAppPath(), 'assets', docName);
+        ipcMain.handle('read-doc', async (event, docName) => {
+            const docPath = path.join(app.getAppPath(), 'assets/docs', docName);
             if (!fs.existsSync(docPath)) {
-                console.error(`[DOCS] Document not found: ${docPath}`);
-                return;
+                return { success: false, error: 'Document not found' };
             }
+            try {
+                const content = fs.readFileSync(docPath, 'utf8');
+                return { success: true, content };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
+        });
 
-            const docWindow = new BrowserWindow({
-                width: 1000,
-                height: 800,
-                title: `ScenePlus+ | ${docName.replace(/_/g, ' ').replace('.html', '')}`,
-                icon: path.join(app.getAppPath(), 'assets/logo_ScenePlus+.ico'),
-                autoHideMenuBar: true,
-                webPreferences: {
-                    nodeIntegration: false,
-                    contextIsolation: true
-                }
+        ipcMain.handle('export-doc', async (event, docName, content) => {
+            if (!mainWindow) return { success: false, error: 'No main window' };
+            const result = await dialog.showSaveDialog(mainWindow, {
+                title: 'Export Document',
+                defaultPath: docName,
+                filters: [{ name: 'Markdown Document', extensions: ['md'] }]
             });
-
-            docWindow.setMenuBarVisibility(false);
-            docWindow.loadFile(docPath);
+            if (result.canceled || !result.filePath) return { success: false, error: 'Canceled' };
+            try {
+                fs.writeFileSync(result.filePath, content, 'utf8');
+                return { success: true };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
         });
 
         // --- Settings (Legacy directly in IpcHandler for now) ---
@@ -172,6 +178,12 @@ export class IpcHandler {
             } catch (err: any) {
                 return { success: false, error: err.message };
             }
+        });
+
+        // --- App State ---
+        ipcMain.handle('set-app-state', async (event, newState: Partial<AppState>) => {
+            this.windowManager.setState(newState);
+            return { success: true };
         });
     }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "Desktop Shooter",
+  "mediatype": "code",
+  "playmode": "hold",
+  "path": "/index.js",
+  "params": [
+    { "key": "difficulty", "label": "Difficulty", "type": "slider", "min": 1, "max": 10, "default": 5 },
+    { "key": "targetColor", "label": "Target Color", "type": "color", "default": "#ff0055" },
+    { "key": "sparkColor", "label": "Spark Color", "type": "color", "default": "#ffd700" }
+  ]
+}

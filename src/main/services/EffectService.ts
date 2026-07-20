@@ -34,10 +34,10 @@ export class EffectService {
         if (existing.length > 0) return;
 
         console.log('[WELCOME] First run detected. Installing official samples...');
-        const samples = ['mouse_particle.scenefx', 'cyber_invert.scenefx', 'gravity_distortion.scenefx'];
+        const samples = ['Absolute_Cyber_Sync.scenefx', 'Desktop_Shooter.scenefx', 'gravity_distortion.scenefx'];
 
         samples.forEach(s => {
-            const src = path.join(this.assetsDir, s);
+            const src = path.join(this.assetsDir, 'effects-source', s);
             if (fs.existsSync(src)) {
                 try {
                     const buffer = fs.readFileSync(src);
@@ -62,7 +62,7 @@ export class EffectService {
             const urlPath = request.url.substring(8);
 
             if (urlPath.startsWith('_core/')) {
-                const corePath = path.join(this.assetsDir, urlPath.substring(6));
+                const corePath = path.join(this.assetsDir, 'system', urlPath.substring(6));
                 return callback({ path: path.normalize(corePath) });
             }
 
