@@ -23,6 +23,9 @@ jobs:
       - name: Package install
         run: bun install
 
+      - name: Build Code
+        run: bun run build
+
       - name: Build Application
         run: bunx electron-builder --win --publish never
 
