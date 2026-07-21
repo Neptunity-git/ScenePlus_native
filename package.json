@@ -7,9 +7,9 @@
     "start": "bun run build && electron .",
     "build": "bun run build:main && bun run build:renderer && bun run build:worker && bun run build:copy",
     "build:main": "bun build ./src/main/main.ts ./src/preload.ts --outdir ./out --target node --format cjs --packages external",
-    "build:renderer": "bun build ./src/renderer.ts --outdir ./out --target browser",
+    "build:renderer": "bun build ./src/renderer.ts ./src/composer.ts --outdir ./out --target browser",
     "build:worker": "bun build ./src/worker.ts --outdir ./out --target node --format cjs --packages external",
-    "build:copy": "node -e \"const fs=require('fs'); fs.mkdirSync('out', {recursive:true}); fs.copyFileSync('src/index.html', 'out/index.html'); fs.copyFileSync('src/index.css', 'out/index.css');\"",
+    "build:copy": "node -e \"const fs=require('fs'); fs.mkdirSync('out', {recursive:true}); fs.copyFileSync('src/index.html', 'out/index.html'); fs.copyFileSync('src/index.css', 'out/index.css'); fs.copyFileSync('src/composer.html', 'out/composer.html'); fs.copyFileSync('src/composer.css', 'out/composer.css');\"",
     "build:ts": "bun run build",
     "build:win": "electron-builder --win"
   },

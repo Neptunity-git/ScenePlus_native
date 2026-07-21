@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
 import { AppState, ImportResult, NetworkInterfaceInfo, CaptureResult, ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from './shared/types';
 
 export const api = {
@@ -20,6 +20,12 @@ export const api = {
     deleteEffect: (effectId: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('delete-effect', effectId),
     scanEffects: (): Promise<{success: boolean; effects?: any[]; error?: string}> => ipcRenderer.invoke('scan-effects'),
     captureScreen: (resolution: string): Promise<CaptureResult> => ipcRenderer.invoke('capture-screen', resolution),
+    
+    // Effect Composer
+    openEffectComposer: (): Promise<{success: boolean}> => ipcRenderer.invoke('open-effect-composer'),
+    saveComposedEffect: (meta: string, assetData: any): Promise<{success: boolean; hash?: string; error?: string}> => ipcRenderer.invoke('save-composed-effect', meta, assetData),
+    selectAssetFile: (filters?: any[]): Promise<{canceled: boolean; file: string | null}> => ipcRenderer.invoke('select-asset-file', filters),
+    onEffectComposed: (callback: (data: { hash: string; meta: any; basePath: string }) => void) => ipcRenderer.on('effect-composed', (_event, data) => callback(data)),
 
     // Listeners for progress
     onImportProgress: (callback: (percent: number) => void) => ipcRenderer.on('import-progress', (_event, value) => callback(value)),
@@ -55,7 +61,10 @@ export const api = {
     // WebUtils for path resolution (Electron 28+)
     getPathForFile: (file: File): string => {
         return webUtils.getPathForFile(file);
-    }
+    },
+
+    // UI Scaling
+    setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor)
 };
 
 contextBridge.exposeInMainWorld('api', api);

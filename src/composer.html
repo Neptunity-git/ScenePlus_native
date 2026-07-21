@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Effect Composer</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="composer.css">
+</head>
+<body>
+    <div class="composer-container">
+        <header class="composer-header">
+            <h2>EFFECT COMPOSER</h2>
+            <div class="composer-steps">
+                <span id="step1-indicator" class="active">STEP 1: META</span>
+                <span id="step2-indicator">STEP 2: ASSET</span>
+            </div>
+        </header>
+
+        <!-- STEP 1: META.JSON -->
+        <div id="step-1" class="composer-step active">
+            <p class="composer-desc">Paste your generated <strong>meta.json</strong> code below.</p>
+            <textarea id="meta-textarea" class="cyber-textarea" placeholder='{
+  "name": "My Effect",
+  "mediatype": "code",
+  "playmode": "once",
+  "duration": 1500,
+  "path": "/index.js",
+  "params": []
+}'></textarea>
+            
+            <div class="error-box hidden" id="meta-error"></div>
+            
+            <div class="composer-footer">
+                <button class="cyber-btn accent" id="btn-validate-meta">VALIDATE & NEXT</button>
+            </div>
+        </div>
+
+        <!-- STEP 2: ASSET (Script or Media) -->
+        <div id="step-2" class="composer-step hidden">
+            <p class="composer-desc" id="asset-desc">Provide the effect asset.</p>
+            
+            <!-- Asset UI for CODE -->
+            <div id="asset-ui-code" class="hidden" style="display: flex; flex: 1; flex-direction: column;">
+                <textarea id="code-textarea" class="cyber-textarea" placeholder='// Paste your JavaScript effect code here'></textarea>
+            </div>
+
+            <!-- Asset UI for FILE (image/video/sound) -->
+            <div id="asset-ui-file" class="hidden asset-file-box">
+                <div id="selected-file-display" class="file-display">NO FILE SELECTED</div>
+                <button class="cyber-btn" id="btn-select-file">SELECT FILE</button>
+            </div>
+            
+            <div class="error-box hidden" id="asset-error"></div>
+
+            <div class="composer-footer">
+                <button class="cyber-btn" id="btn-back-step1">BACK</button>
+                <button class="cyber-btn accent" id="btn-save-install">SAVE & INSTALL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="cyber-modal-overlay hidden">
+        <div class="cyber-modal compact">
+            <div class="cyber-modal-header">
+                <h3>SYSTEM MESSAGE</h3>
+            </div>
+            <div class="cyber-modal-body centered">
+                <p style="color: var(--neon-blue); font-size: 1.2rem;">EFFECT INSTALLED SUCCESSFULLY</p>
+                <p>Please close this window and the library will automatically refresh.</p>
+            </div>
+            <div class="cyber-modal-footer">
+                <button id="btn-close-success" class="cyber-btn accent">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="composer.js" type="module"></script>
+</body>
+</html>

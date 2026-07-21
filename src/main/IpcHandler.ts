@@ -180,6 +180,81 @@ export class IpcHandler {
             }
         });
 
+        // --- Effect Composer ---
+        ipcMain.handle('open-effect-composer', async () => {
+            const composerWindow = new BrowserWindow({
+                width: 900,
+                height: 700,
+                autoHideMenuBar: true,
+                title: "Effect Composer",
+                backgroundColor: '#000000',
+                icon: path.join(app.getAppPath(), 'assets/system/logo_ScenePlus+.ico'),
+                webPreferences: {
+                    preload: path.join(app.getAppPath(), 'out/preload.js'),
+                    contextIsolation: true,
+                    nodeIntegration: false,
+                }
+            });
+            composerWindow.setAlwaysOnTop(true, 'pop-up-menu');
+            composerWindow.loadFile(path.join(app.getAppPath(), 'out/composer.html'));
+            return { success: true };
+        });
+
+        ipcMain.handle('save-composed-effect', async (event, metaText: string, assetData: any) => {
+            try {
+                const meta = JSON.parse(metaText);
+                const crypto = require('crypto');
+                const hash = crypto.createHash('sha256').update(metaText + Date.now().toString()).digest('hex');
+                const destDir = path.join(app.getPath('userData'), 'effects', hash);
+                fs.mkdirSync(destDir, { recursive: true });
+                
+                // Write meta.json
+                fs.writeFileSync(path.join(destDir, 'meta.json'), metaText, 'utf8');
+
+                // Process Asset
+                let mainFile = 'index.js';
+                if (meta.path) {
+                    mainFile = meta.path.replace(/^\//, ''); // Remove leading slash if any
+                }
+                
+                if (assetData.type === 'text') {
+                    fs.writeFileSync(path.join(destDir, mainFile), assetData.content, 'utf8');
+                } else if (assetData.type === 'file') {
+                    const srcPath = assetData.path;
+                    if (fs.existsSync(srcPath)) {
+                        // Keep original filename or use path if it's specified exactly
+                        const targetName = meta.path ? meta.path.replace(/^\//, '') : path.basename(srcPath);
+                        fs.copyFileSync(srcPath, path.join(destDir, targetName));
+                    } else {
+                        throw new Error(`Asset file not found: ${srcPath}`);
+                    }
+                }
+                
+                if (mainWindow) {
+                    mainWindow.webContents.send('effect-composed', {
+                        hash,
+                        meta,
+                        basePath: `scene://${hash}/`
+                    });
+                }
+
+                return { success: true, hash };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
+        });
+
+        ipcMain.handle('select-asset-file', async (event, filters) => {
+            if (!mainWindow) return { canceled: true, file: null };
+            const result = await dialog.showOpenDialog(mainWindow, {
+                title: 'Select Asset File',
+                filters: filters || [],
+                properties: ['openFile'],
+            });
+            if (result.canceled || result.filePaths.length === 0) return { canceled: true, file: null };
+            return { canceled: false, file: result.filePaths[0] };
+        });
+
         // --- App State ---
         ipcMain.handle('set-app-state', async (event, newState: Partial<AppState>) => {
             this.windowManager.setState(newState);

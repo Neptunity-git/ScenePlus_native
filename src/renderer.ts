@@ -11,6 +11,16 @@ import { SyncManager } from './network/SyncManager';
 import { UIManager } from './ui/UIManager';
 import { RendererIPC } from './ipc/RendererIPC';
 
+// Setup OS UI Scaling
+function initZoom() {
+    const baseHeight = 720;
+    const currentHeight = window.screen.height;
+    const zoomFactor = currentHeight / baseHeight;
+    window.api.setZoomFactor(zoomFactor);
+}
+initZoom();
+window.addEventListener('resize', initZoom);
+
 // Core Managers
 const effectManager = new EffectManager(1); // Reduced poolSize
 const virtualKeyboard = new VirtualKeyboard('keyboard-grid', effectManager);
@@ -29,6 +39,23 @@ document.getElementById('btn-doc-tos-user')?.addEventListener('click', () => {
 });
 document.getElementById('btn-doc-tos-creator')?.addEventListener('click', () => {
     docsViewer.openDocument('ToS_For_Creators.md', 'CREATOR TERMS OF SERVICE');
+});
+
+// Composer Binding
+document.getElementById('btn-make-fx')?.addEventListener('click', () => {
+    window.api.openEffectComposer();
+});
+
+window.api.onEffectComposed((data: any) => {
+    if (effectLibrary.allEffects.some(e => e.effectId === data.hash)) {
+        return;
+    }
+    const displayName = data.meta.name || data.hash;
+    effectManager.registerEffect(data.hash, data.meta, data.basePath);
+    effectManager.effectNames = effectManager.effectNames || {};
+    effectManager.effectNames[data.hash] = displayName;
+    effectLibrary.addCard(data.hash, data.meta);
+    uiLog(`✔ Composed [${displayName}]  ${data.meta.mediatype}/${data.meta.playmode}`, 'import');
 });
 
 // Sub Controllers
