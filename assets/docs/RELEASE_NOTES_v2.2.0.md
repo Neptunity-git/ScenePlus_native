@@ -18,8 +18,9 @@
 ---
 
 ### 2. 🖥️ HiDPI スケーリング & 画面描画の完全補正
-- **高解像度ディスプレイにおける座標精度の向上**
-  - 4K / 2K などの HiDPI 環境において、論理ピクセル (`window.screen.height`) と `webContents.getZoomFactor()` に基づく正確なカーソル位置計算を実装。
+- **高解像度・縦横比アスペクト比対応のレスポンシブズーム (`renderer.ts`)**
+  - 2880x1800 (200% 拡大 / 論理1440x900) や 16:10 ディスプレイ環境で、左右の `MODE INFO` や `SYSTEM LOG` パネルが画面外へはみ出す現象を解消。
+  - `Math.min(currentWidth / 1280, currentHeight / 720)` による縦横比両対応の自動スケーリング計算を実装し、どのような表示倍率・アスペクト比でも UI 全体が画面内に美しく収まるよう改善しました。
 - **Canvas エフェクトの描画はみ出し（ダブルスケール）修復**
   - `Desktop_Virus_Joke` などの Canvas 描画系エフェクトで発生していた画面からの枠はみ出し・拡大オーバーフロー現象を修正しました。
 - **画面枠リサイズの固定化 (`resizable: false`)**
@@ -49,8 +50,9 @@
 |---|---|---|
 | **Core Native** | 🌟 New | C++ Native Addon (`keyblock.cpp` / `binding.gyp`) の新規構築と導入 |
 | **Input Engine** | ⚡ Improved | uiohook と keyblock の LIFO 順序同期（`condition_variable`）によりエフェクト発火とキー遮断を両立 |
+| **UI / Config** | 🌟 New | エフェクトカードの名前変更機能（✏️ボタン / ダブルクリック編集）の追加 & 不要なプレビュー再生（▶）ボタンの削除 |
 | **UI / Config** | 🌟 New | 設定モーダルに「Block Assigned Keys Only」オプションを設置 |
-| **Display** | 🐛 Fixed | HiDPI ディスプレイでのマウス座標計算、Canvas DPR 2重スケールの修正 |
+| **Display** | 🐛 Fixed | 縦横比・HiDPI ディスプレイでのマウス座標計算、Canvas DPR 2重スケールの修正 |
 | **Window** | 🐛 Fixed | ウィンドウ端でのリサイズ無効化 (`resizable: false`)、タスクバー非表示補正 |
 | **Network** | 🐛 Fixed | HTTP ダウンロードハンドラーでの動的 ZIP 生成追加（Mode A/B での転送失敗を解決） |
 | **Build System**| ⚡ Improved | C++ 差分ビルド導入による起動速度の短縮 |

@@ -11,11 +11,15 @@ import { SyncManager } from './network/SyncManager';
 import { UIManager } from './ui/UIManager';
 import { RendererIPC } from './ipc/RendererIPC';
 
-// Setup OS UI Scaling
+// Setup OS UI Scaling (Fit both width and height)
 function initZoom() {
+    const baseWidth = 1280;
     const baseHeight = 720;
-    const currentHeight = window.screen.height;
-    const zoomFactor = currentHeight / baseHeight;
+    const currentWidth = window.innerWidth || window.screen.width;
+    const currentHeight = window.innerHeight || window.screen.height;
+    
+    // Scale proportionally to fit within both dimensions
+    const zoomFactor = Math.min(currentWidth / baseWidth, currentHeight / baseHeight);
     window.api.setZoomFactor(zoomFactor);
 }
 initZoom();

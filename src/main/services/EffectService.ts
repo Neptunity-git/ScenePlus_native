@@ -34,7 +34,7 @@ export class EffectService {
         if (existing.length > 0) return;
 
         console.log('[WELCOME] First run detected. Installing official samples...');
-        const samples = ['Absolute_Cyber_Sync', 'Desktop_Shooter', 'Desktop_Virus_Joke', 'gravity_distortion'];
+        const samples = ['Absolute_Cyber_Sync', 'Desktop_Virus_Joke'];
 
         samples.forEach(s => {
             const srcZip = path.join(this.assetsDir, 'effects-source', `${s}.scenefx`);

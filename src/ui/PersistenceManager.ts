@@ -14,6 +14,10 @@ export class PersistenceManager {
         this.effectLibrary = effectLibrary;
         this.virtualKeyboard = virtualKeyboard;
 
+        this.effectLibrary.onEffectRenamed = (effectId: string, newName: string) => {
+            this.renameEffect(effectId, newName);
+        };
+
         this.state = {
             currentPreset: 1,
             maxN: 5,
@@ -26,7 +30,8 @@ export class PersistenceManager {
             presets: {
                 1: {}, 2: {}, 3: {}, 4: {},
                 5: {}, 6: {}, 7: {}
-            }
+            },
+            customEffectNames: {}
         };
     }
 
@@ -49,6 +54,23 @@ export class PersistenceManager {
             }
 
             this.state = { ...this.state, ...settingsResult.settings };
+            
+            if (this.state.customEffectNames) {
+                if (!this.effectManager.effectNames) {
+                    this.effectManager.effectNames = {};
+                }
+                for (const [id, customName] of Object.entries(this.state.customEffectNames)) {
+                    if (customName && typeof customName === 'string') {
+                        this.effectManager.effectNames[id] = customName;
+                        const item = this.effectLibrary.allEffects.find(x => x.effectId === id);
+                        if (item) {
+                            const titleEl = item.card.querySelector('.card-title');
+                            if (titleEl) titleEl.textContent = customName;
+                            item.meta.name = customName;
+                        }
+                    }
+                }
+            }
             
             if (this.state.engineKey === 64 && this.state.settingsKey === 65) {
                 this.state.engineKey = 66;
@@ -142,6 +164,14 @@ export class PersistenceManager {
             }
         }
         window.api.setAssignedKeys(assignedKeyCodes, !!this.state.blockAssignedKeys);
+    }
+
+    public renameEffect(effectId: string, newName: string) {
+        if (!this.state.customEffectNames) this.state.customEffectNames = {};
+        this.state.customEffectNames[effectId] = newName;
+        if (!this.effectManager.effectNames) this.effectManager.effectNames = {};
+        this.effectManager.effectNames[effectId] = newName;
+        this.save();
     }
 
     private _nameFromMeta(meta: any) {
