@@ -5,6 +5,7 @@ export class ConfigModal {
     private btnSave: HTMLElement;
     
     private inputMaxN: HTMLInputElement;
+    private chkBlockAssignedKeys: HTMLInputElement;
     private selectKeyEngine: HTMLSelectElement;
     private selectKeySettings: HTMLSelectElement;
     private selectSyncMode: HTMLSelectElement;
@@ -26,6 +27,7 @@ export class ConfigModal {
         this.btnSave = document.getElementById('btn-save-config') as HTMLElement;
         
         this.inputMaxN = document.getElementById('config-max-n') as HTMLInputElement;
+        this.chkBlockAssignedKeys = document.getElementById('config-block-assigned-keys') as HTMLInputElement;
         this.selectKeyEngine = document.getElementById('config-key-engine') as HTMLSelectElement;
         this.selectKeySettings = document.getElementById('config-key-settings') as HTMLSelectElement;
         this.selectSyncMode = document.getElementById('config-sync-mode') as HTMLSelectElement;
@@ -111,6 +113,9 @@ export class ConfigModal {
         const state = this.persistence.state;
         
         this.inputMaxN.value = (state.maxN || 5).toString();
+        if (this.chkBlockAssignedKeys) {
+            this.chkBlockAssignedKeys.checked = !!state.blockAssignedKeys;
+        }
         this.selectKeyEngine.value = (state.engineKey || 66).toString();
         this.selectKeySettings.value = (state.settingsKey || 67).toString();
         if (this.selectSyncMode) {
@@ -164,8 +169,11 @@ export class ConfigModal {
             presetNames[idx] = val;
         });
 
+        const blockAssignedKeys = this.chkBlockAssignedKeys ? this.chkBlockAssignedKeys.checked : false;
+
         this.persistence.updateConfig({
             maxN,
+            blockAssignedKeys,
             engineKey,
             settingsKey,
             syncMode: this.selectSyncMode ? this.selectSyncMode.value : 'streaming',

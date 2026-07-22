@@ -102,12 +102,15 @@ export class PersistenceManager {
         if (this.effectLibrary && typeof this.effectLibrary._applyFilters === 'function') {
             this.effectLibrary._applyFilters();
         }
+
+        this.syncAssignedKeysToMain();
     }
 
     public updateConfig(configOverrides: any) {
         this.state = { ...this.state, ...configOverrides };
         this.effectManager.maxN = this.state.maxN;
         window.api.setSystemKeys(this.state.engineKey, this.state.settingsKey);
+        this.syncAssignedKeysToMain();
         this.save();
     }
 
@@ -126,7 +129,19 @@ export class PersistenceManager {
 
     public async save() {
         this.state.presets[this.state.currentPreset] = { ...this.effectManager.keyBindings };
+        this.syncAssignedKeysToMain();
         await window.api.saveSettings(this.state);
+    }
+
+    private syncAssignedKeysToMain() {
+        const assignedKeyCodes: number[] = [];
+        for (const [keyCodeStr, effectIds] of Object.entries(this.effectManager.keyBindings || {})) {
+            if (Array.isArray(effectIds) && effectIds.length > 0) {
+                const code = parseInt(keyCodeStr, 10);
+                if (!isNaN(code)) assignedKeyCodes.push(code);
+            }
+        }
+        window.api.setAssignedKeys(assignedKeyCodes, !!this.state.blockAssignedKeys);
     }
 
     private _nameFromMeta(meta: any) {

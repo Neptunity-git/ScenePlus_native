@@ -36,6 +36,7 @@ export const api = {
 
     // Persistence & Settings
     setSystemKeys: (engineCode?: number, settingsCode?: number): Promise<{success: boolean}> => ipcRenderer.invoke('set-system-keys', engineCode, settingsCode),
+    setAssignedKeys: (keyCodes: number[], blockAssignedKeys?: boolean): Promise<{success: boolean}> => ipcRenderer.invoke('set-assigned-keys', keyCodes, blockAssignedKeys),
     saveSettings: (settings: SettingsConfig): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('save-settings', settings),
     loadSettings: (): Promise<{success: boolean; settings: SettingsConfig | null; error?: string}> => ipcRenderer.invoke('load-settings'),
     setAppState: (state: Partial<AppState>): Promise<{success: boolean}> => ipcRenderer.invoke('set-app-state', state),

@@ -4,6 +4,7 @@ import * as http from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
 import { app } from 'electron';
+import AdmZip from 'adm-zip';
 import { WindowManager } from '../WindowManager';
 import { NetworkInterfaceInfo } from '../../shared/types';
 
@@ -178,7 +179,13 @@ export class NetworkService {
                         const hash = pathname.split('/')[3];
                         if (!hash) return res.writeHead(400) && res.end('Bad Request');
                         
-                        const scenefxPath = path.join(effectsDir, hash, `${hash}.scenefx`);
+                        const targetDir = path.join(effectsDir, hash);
+                        if (!fs.existsSync(targetDir)) {
+                            res.writeHead(404);
+                            return res.end('Effect not found');
+                        }
+
+                        const scenefxPath = path.join(targetDir, `${hash}.scenefx`);
                         if (fs.existsSync(scenefxPath)) {
                             const stat = fs.statSync(scenefxPath);
                             res.writeHead(200, {
@@ -188,8 +195,22 @@ export class NetworkService {
                             });
                             fs.createReadStream(scenefxPath).pipe(res);
                         } else {
-                            res.writeHead(404);
-                            res.end('.scenefx not found');
+                            try {
+                                const zip = new AdmZip();
+                                zip.addLocalFolder(targetDir);
+                                const zipBuffer = zip.toBuffer();
+
+                                res.writeHead(200, {
+                                    'Content-Type': 'application/zip',
+                                    'Content-Length': zipBuffer.length.toString(),
+                                    'Content-Disposition': `attachment; filename="${hash}.scenefx"`
+                                });
+                                res.end(zipBuffer);
+                            } catch (zipErr: any) {
+                                console.error('[HTTP] Failed to dynamically pack effect ZIP:', zipErr);
+                                res.writeHead(500);
+                                res.end('Failed to package effect');
+                            }
                         }
                     } else if (pathname.startsWith('/stream/')) {
                         const parts = pathname.split('/');

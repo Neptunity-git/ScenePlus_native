@@ -1,15 +1,16 @@
 {
   "name": "sceneplus",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Visual effect sampler for creatives and beginners",
   "main": "out/main/main.js",
   "scripts": {
     "start": "bun run build && electron .",
-    "build": "bun run build:main && bun run build:renderer && bun run build:worker && bun run build:copy",
+    "build": "bun run build:native && bun run build:main && bun run build:renderer && bun run build:worker && bun run build:copy",
+    "build:native": "cd src/native && npx -y node-gyp build",
     "build:main": "bun build ./src/main/main.ts ./src/preload.ts --outdir ./out --target node --format cjs --packages external",
     "build:renderer": "bun build ./src/renderer.ts ./src/composer.ts --outdir ./out --target browser",
     "build:worker": "bun build ./src/worker.ts --outdir ./out --target node --format cjs --packages external",
-    "build:copy": "node -e \"const fs=require('fs'); fs.mkdirSync('out', {recursive:true}); fs.copyFileSync('src/index.html', 'out/index.html'); fs.copyFileSync('src/index.css', 'out/index.css'); fs.copyFileSync('src/composer.html', 'out/composer.html'); fs.copyFileSync('src/composer.css', 'out/composer.css');\"",
+    "build:copy": "node -e \"const fs=require('fs'); fs.mkdirSync('out', {recursive:true}); fs.copyFileSync('src/index.html', 'out/index.html'); fs.copyFileSync('src/index.css', 'out/index.css'); fs.copyFileSync('src/composer.html', 'out/composer.html'); fs.copyFileSync('src/composer.css', 'out/composer.css'); if(fs.existsSync('src/native/build/Release/keyblock.node')) fs.copyFileSync('src/native/build/Release/keyblock.node', 'out/keyblock.node');\"",
     "build:ts": "bun run build",
     "build:win": "electron-builder --win"
   },
@@ -23,6 +24,7 @@
   "dependencies": {
     "adm-zip": "^0.5.17",
     "marked": "^18.0.6",
+    "node-addon-api": "^8.9.0",
     "node-osc": "^11.4.0",
     "uiohook-napi": "^1.5.4",
     "uuid": "^14.0.0"

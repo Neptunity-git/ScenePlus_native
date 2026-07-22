@@ -65,6 +65,11 @@ export class IpcHandler {
             return { success: true };
         });
 
+        ipcMain.handle('set-assigned-keys', async (event, keyCodes, blockAssignedKeys) => {
+            this.inputManager.setAssignedKeys(keyCodes, blockAssignedKeys);
+            return { success: true };
+        });
+
         // --- Screen Capture ---
         ipcMain.handle('capture-screen', async (event, resolution) => {
             try {

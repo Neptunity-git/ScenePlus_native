@@ -1,12 +1,39 @@
-import { screen } from 'electron';
+import { screen, app } from 'electron';
 import { uIOhook, UiohookKey } from 'uiohook-napi';
 import { WindowManager } from './WindowManager';
+import * as path from 'path';
+
+let keyblock: any = null;
+try {
+    keyblock = require(path.join(app.getAppPath(), 'out', 'keyblock.node'));
+} catch (e) {
+    console.warn('[InputManager] Could not load keyblock.node', e);
+}
+
+function uiohookToVk(uiohookCode: number): number | null {
+    if (uiohookCode >= 2 && uiohookCode <= 10) return 49 + (uiohookCode - 2); // 1-9
+    if (uiohookCode === 11) return 48; // 0
+
+    const row1 = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
+    if (uiohookCode >= 16 && uiohookCode <= 25) return row1[uiohookCode - 16].charCodeAt(0);
+    
+    const row2 = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
+    if (uiohookCode >= 30 && uiohookCode <= 38) return row2[uiohookCode - 30].charCodeAt(0);
+    
+    const row3 = ['Z', 'X', 'C', 'V', 'B', 'N', 'M'];
+    if (uiohookCode >= 44 && uiohookCode <= 50) return row3[uiohookCode - 44].charCodeAt(0);
+
+    return null;
+}
 
 export class InputManager {
     private windowManager: WindowManager;
     public toggleEngineKey: number = UiohookKey.F8;
     public toggleSettingsKey: number = UiohookKey.F9;
     private pressedKeys = new Set<number>();
+    
+    public blockAssignedKeys: boolean = false;
+    private assignedKeyCodes = new Set<number>();
 
     constructor(windowManager: WindowManager) {
         this.windowManager = windowManager;
@@ -20,8 +47,6 @@ export class InputManager {
             const bounds = win.getBounds();
             const localX = pos.x - bounds.x;
             const localY = pos.y - bounds.y;
-            // Convert logical window coords to CSS-zoomed coords used by the renderer.
-            // webContents.getZoomFactor() returns the current page zoom set by initZoom().
             const zoomFactor = win.webContents.getZoomFactor();
             return {
                 x: localX / zoomFactor,
@@ -32,6 +57,13 @@ export class InputManager {
     }
 
     public startHooks(): void {
+        // Start native blocking hook FIRST
+        if (keyblock) {
+            keyblock.start();
+            keyblock.setEnabled(this.windowManager.getState().engineOn && this.blockAssignedKeys);
+            this.syncBlockedKeys();
+        }
+
         uIOhook.on('keydown', (e) => {
             if (this.pressedKeys.has(e.keycode)) return;
             this.pressedKeys.add(e.keycode);
@@ -49,8 +81,11 @@ export class InputManager {
             // Toggle Engine (only if Settings are closed)
             if (e.keycode === this.toggleEngineKey) {
                 if (!state.settingsOpen) {
-                    this.windowManager.setState({ engineOn: !state.engineOn });
-                    if (!this.windowManager.getState().engineOn) {
+                    const nextEngineOn = !state.engineOn;
+                    this.windowManager.setState({ engineOn: nextEngineOn });
+                    if (keyblock) keyblock.setEnabled(nextEngineOn && this.blockAssignedKeys);
+
+                    if (!nextEngineOn) {
                         this.panicAllEffects();
                     }
                 }
@@ -63,6 +98,7 @@ export class InputManager {
                     settingsOpen: newSettingsOpen,
                     engineOn: newSettingsOpen ? false : state.engineOn
                 });
+                if (keyblock) keyblock.setEnabled(!newSettingsOpen && state.engineOn && this.blockAssignedKeys);
 
                 if (newSettingsOpen) {
                     this.panicAllEffects();
@@ -136,6 +172,7 @@ export class InputManager {
 
     public stopHooks(): void {
         uIOhook.stop();
+        if (keyblock) keyblock.stop();
     }
 
     private panicAllEffects(): void {
@@ -147,5 +184,28 @@ export class InputManager {
     public setSystemKeys(engineKey?: number, settingsKey?: number): void {
         if (engineKey !== undefined) this.toggleEngineKey = engineKey;
         if (settingsKey !== undefined) this.toggleSettingsKey = settingsKey;
+    }
+
+    public setAssignedKeys(keyCodes: number[], blockAssignedKeys?: boolean): void {
+        this.assignedKeyCodes = new Set(keyCodes);
+        if (blockAssignedKeys !== undefined) {
+            this.blockAssignedKeys = blockAssignedKeys;
+            if (keyblock) {
+                const state = this.windowManager.getState();
+                keyblock.setEnabled(state.engineOn && this.blockAssignedKeys);
+            }
+        }
+        this.syncBlockedKeys();
+    }
+    
+    private syncBlockedKeys(): void {
+        if (!keyblock) return;
+        keyblock.clearAllBlockedKeys();
+        for (const code of this.assignedKeyCodes) {
+            const vk = uiohookToVk(code);
+            if (vk !== null) {
+                keyblock.setBlockedKey(vk, true);
+            }
+        }
     }
 }
