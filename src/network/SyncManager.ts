@@ -1,19 +1,18 @@
 import { uiLog } from '../ui/UILogger';
-import { EffectManager } from '../engine/EffectManager';
+import { IEffectManager, IPersistenceManager } from '../shared/interfaces';
 import { EffectLibrary } from '../ui/EffectLibrary';
-import { PersistenceManager } from '../ui/PersistenceManager';
 
 export class SyncManager {
-    private effectManager: EffectManager;
+    private effectManager: IEffectManager;
     private effectLibrary: EffectLibrary;
-    private persistence: PersistenceManager;
+    private persistence: IPersistenceManager;
     private indicatorSync: HTMLElement | null;
     private activeSyncCount = 0;
 
     constructor(
-        effectManager: EffectManager, 
+        effectManager: IEffectManager, 
         effectLibrary: EffectLibrary, 
-        persistence: PersistenceManager
+        persistence: IPersistenceManager
     ) {
         this.effectManager = effectManager;
         this.effectLibrary = effectLibrary;

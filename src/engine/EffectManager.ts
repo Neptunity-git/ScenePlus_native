@@ -30,6 +30,7 @@ export class EffectManager {
     public players: Record<string, Player>;
     public keyBindings: Record<string, string[]>;
     public effectNames?: Record<string, string>;
+    public onTriggerKey?: (type: 'down' | 'up', keyCode: number, effectIds: string[]) => void;
     private heldKeys: Set<number | string>;
     
     // Shared Canvas
@@ -169,6 +170,10 @@ export class EffectManager {
         const effectIds = this.keyBindings[keyCode.toString()] || [];
         if (effectIds.length === 0) return;
 
+        if (this.onTriggerKey) {
+            this.onTriggerKey('down', keyCode, effectIds);
+        }
+
         const group = new TriggerGroup(keyCode);
 
         effectIds.forEach(id => {
@@ -190,6 +195,11 @@ export class EffectManager {
 
     private triggerUp(keyCode: number) {
         this.heldKeys.delete(keyCode);
+
+        const effectIds = this.keyBindings[keyCode.toString()] || [];
+        if (effectIds.length > 0 && this.onTriggerKey) {
+            this.onTriggerKey('up', keyCode, effectIds);
+        }
 
         let cleanGroups = false;
         for (const group of this.activeGroups) {

@@ -1,5 +1,7 @@
+import { IPersistenceManager } from '../shared/interfaces';
+
 export class ConfigModal {
-    private persistence: any;
+    private persistence: IPersistenceManager;
     private modal: HTMLElement;
     private btnClose: HTMLElement;
     private btnSave: HTMLElement;
@@ -12,15 +14,11 @@ export class ConfigModal {
     private syncWarning: HTMLElement;
     private presetNameGrid: HTMLElement;
 
-    private btnDocGuide: HTMLElement;
-    private btnDocTosUser: HTMLElement;
-    private btnDocTosCreator: HTMLElement;
-
     private fKeys: { name: string; code: number }[];
 
     public onConfigSaved?: (presetNames: Record<number, string>) => void;
 
-    constructor(persistence: any) {
+    constructor(persistence: IPersistenceManager) {
         this.persistence = persistence;
         this.modal = document.getElementById('config-modal') as HTMLElement;
         this.btnClose = document.getElementById('btn-close-config') as HTMLElement;
@@ -33,10 +31,6 @@ export class ConfigModal {
         this.selectSyncMode = document.getElementById('config-sync-mode') as HTMLSelectElement;
         this.syncWarning = document.getElementById('config-sync-warning') as HTMLElement;
         this.presetNameGrid = document.getElementById('preset-name-grid') as HTMLElement;
-
-        this.btnDocGuide = document.getElementById('btn-doc-guide') as HTMLElement;
-        this.btnDocTosUser = document.getElementById('btn-doc-tos-user') as HTMLElement;
-        this.btnDocTosCreator = document.getElementById('btn-doc-tos-creator') as HTMLElement;
 
         this.fKeys = [
             { name: 'F1', code: 59 }, { name: 'F2', code: 60 },
@@ -80,22 +74,6 @@ export class ConfigModal {
         if (this.selectSyncMode) {
             this.selectSyncMode.addEventListener('change', () => {
                 this.updateSyncWarning();
-            });
-        }
-
-        if (this.btnDocGuide) {
-            this.btnDocGuide.addEventListener('click', () => {
-                window.api.openDocument('Official_Guide_For_Creators.html');
-            });
-        }
-        if (this.btnDocTosUser) {
-            this.btnDocTosUser.addEventListener('click', () => {
-                window.api.openDocument('ToS_For_Users.html');
-            });
-        }
-        if (this.btnDocTosCreator) {
-            this.btnDocTosCreator.addEventListener('click', () => {
-                window.api.openDocument('ToS_For_Creators.html');
             });
         }
     }

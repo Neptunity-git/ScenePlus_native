@@ -1,14 +1,13 @@
 import { uiLog } from './UILogger';
-import { EffectManager } from '../engine/EffectManager';
+import { IEffectManager, IPersistenceManager, IUIManager } from '../shared/interfaces';
 import { EffectLibrary } from './EffectLibrary';
-import { PersistenceManager } from './PersistenceManager';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { ConfigModal } from './ConfigModal';
 
-export class UIManager {
-    private effectManager: EffectManager;
+export class UIManager implements IUIManager {
+    private effectManager: IEffectManager;
     private effectLibrary: EffectLibrary;
-    private persistence: PersistenceManager;
+    private persistence: IPersistenceManager;
     private virtualKeyboard: VirtualKeyboard;
     private configModal: ConfigModal;
 
@@ -24,9 +23,9 @@ export class UIManager {
     private isImporting = false;
 
     constructor(
-        effectManager: EffectManager,
+        effectManager: IEffectManager,
         effectLibrary: EffectLibrary,
-        persistence: PersistenceManager,
+        persistence: IPersistenceManager,
         virtualKeyboard: VirtualKeyboard,
         configModal: ConfigModal
     ) {
@@ -221,12 +220,77 @@ export class UIManager {
         if (this.diagModal) this.diagModal.classList.add('hidden');
     }
 
-    public refreshPresetNamesUI(namesObj: Record<string, string>) {
+    public refreshPresetNamesUI(namesObj: Record<string | number, string>) {
         if (!namesObj) return;
         const presetBtns = document.querySelectorAll('.cyber-btn.preset');
         presetBtns.forEach((btn, idx) => {
             const i = (idx + 1).toString();
-            if (namesObj[i]) btn.textContent = namesObj[i];
+            const val = namesObj[i] || namesObj[idx + 1];
+            if (val) btn.textContent = val;
+        });
+    }
+
+    public renderDiscoveredDevicesList(devices: string[], onConnectClick: (ip: string) => void) {
+        const listEl = document.getElementById('osc-device-list');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        
+        if (devices.length === 0) {
+            listEl.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 6px;">No devices found</div>';
+            return;
+        }
+
+        devices.forEach(ip => {
+            const card = document.createElement('div');
+            card.style.background = 'rgba(0, 20, 25, 0.6)';
+            card.style.border = '1px solid rgba(20, 250, 200, 0.35)';
+            card.style.borderRadius = '4px';
+            card.style.padding = '6px 8px';
+            card.style.marginBottom = '6px';
+            card.style.display = 'flex';
+            card.style.alignItems = 'center';
+            card.style.justifyContent = 'space-between';
+            card.style.gap = '6px';
+            card.style.boxShadow = 'inset 0 0 8px rgba(20, 250, 200, 0.1)';
+
+            const ipContainer = document.createElement('div');
+            ipContainer.style.display = 'flex';
+            ipContainer.style.flexDirection = 'column';
+            ipContainer.style.overflow = 'hidden';
+
+            const ipLabel = document.createElement('span');
+            ipLabel.style.fontFamily = 'monospace';
+            ipLabel.style.fontSize = '0.85rem';
+            ipLabel.style.fontWeight = 'bold';
+            ipLabel.style.color = 'var(--neon-cyan)';
+            ipLabel.style.textShadow = '0 0 4px rgba(20, 250, 200, 0.4)';
+            ipLabel.style.whiteSpace = 'nowrap';
+            ipLabel.style.overflow = 'hidden';
+            ipLabel.style.textOverflow = 'ellipsis';
+            ipLabel.textContent = ip;
+
+            const subLabel = document.createElement('span');
+            subLabel.style.fontSize = '0.58rem';
+            subLabel.style.color = 'var(--text-muted)';
+            subLabel.style.marginTop = '1px';
+            subLabel.textContent = 'RECEIVER NODE';
+
+            ipContainer.appendChild(ipLabel);
+            ipContainer.appendChild(subLabel);
+
+            const connectBtn = document.createElement('button');
+            connectBtn.className = 'cyber-btn accent';
+            connectBtn.style.fontSize = '0.65rem';
+            connectBtn.style.padding = '4px 8px';
+            connectBtn.style.whiteSpace = 'nowrap';
+            connectBtn.style.flexShrink = '0';
+            connectBtn.style.lineHeight = '1';
+            connectBtn.textContent = 'CONNECT';
+            connectBtn.onclick = () => onConnectClick(ip);
+
+            card.appendChild(ipContainer);
+            card.appendChild(connectBtn);
+            listEl.appendChild(card);
         });
     }
 }

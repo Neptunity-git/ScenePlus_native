@@ -106,6 +106,10 @@ setupModeInfoPanel(async (mode: string) => {
         if (oscScanBtn) {
             oscScanBtn.onclick = () => {
                 networkController.discoveredDevices = [];
+                if (networkController.onDiscoveredDevicesChanged) {
+                    networkController.onDiscoveredDevicesChanged([]);
+                }
+                uiLog('[SCAN] Scanning local network for ScenePlus nodes...', 'default');
                 window.api.scanSubnet();
             };
         }
@@ -122,6 +126,15 @@ setupModeInfoPanel(async (mode: string) => {
         }
     }
 });
+
+// Render discovered devices in TRANSMIT mode
+networkController.onDiscoveredDevicesChanged = (devices: string[]) => {
+    uiManager.renderDiscoveredDevicesList(devices, (ip: string) => {
+        networkController.attemptConnection(ip, () => {
+            // on Timeout
+        });
+    });
+};
 
 // Global Window State
 let engineOn = true;

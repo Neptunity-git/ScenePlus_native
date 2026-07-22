@@ -184,7 +184,7 @@ export class VirtualKeyboard {
         this.updateBadge(keyCode);
     }
 
-    private clearAllInternal() {
+    public clearAllInternal() {
         Object.keys(this.effectManager.keyBindings).forEach(keyCodeStr => {
             const keyCode = parseInt(keyCodeStr, 10);
             this.effectManager.bindKey(keyCode, []);

@@ -1,15 +1,15 @@
-import { EffectManager } from '../engine/EffectManager';
+import { IEffectManager } from '../shared/interfaces';
 import { EffectLibrary } from './EffectLibrary';
 import { VirtualKeyboard } from './VirtualKeyboard';
 
 export class PersistenceManager {
-    private effectManager: EffectManager;
+    private effectManager: IEffectManager;
     private effectLibrary: EffectLibrary;
     private virtualKeyboard: VirtualKeyboard;
 
     public state: any;
 
-    constructor(effectManager: EffectManager, effectLibrary: EffectLibrary, virtualKeyboard: VirtualKeyboard) {
+    constructor(effectManager: IEffectManager, effectLibrary: EffectLibrary, virtualKeyboard: VirtualKeyboard) {
         this.effectManager = effectManager;
         this.effectLibrary = effectLibrary;
         this.virtualKeyboard = virtualKeyboard;
@@ -102,7 +102,7 @@ export class PersistenceManager {
 
         this.state.currentPreset = presetIndex;
         
-        (this.virtualKeyboard as any).clearAllInternal();
+        this.virtualKeyboard.clearAllInternal();
 
         const newBindings = this.state.presets[presetIndex] || {};
         for (const [keyCode, effectIds] of Object.entries(newBindings)) {

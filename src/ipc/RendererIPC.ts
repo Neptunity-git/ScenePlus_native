@@ -1,29 +1,60 @@
-import { EffectManager } from '../engine/EffectManager';
-import { NetworkController } from '../network/NetworkController';
-import { SyncManager } from '../network/SyncManager';
-import { UIManager } from '../ui/UIManager';
-import { PersistenceManager } from '../ui/PersistenceManager';
+import { IEffectManager, INetworkController, ISyncManager, IUIManager, IPersistenceManager } from '../shared/interfaces';
 import { uiLog } from '../ui/UILogger';
 
+type OscHandler = (args: any[], senderIp: string) => void;
+
 export class RendererIPC {
-    private effectManager: EffectManager;
-    private networkController: NetworkController;
-    private syncManager: SyncManager;
-    private uiManager: UIManager;
-    private persistence: PersistenceManager;
+    private effectManager: IEffectManager;
+    private networkController: INetworkController;
+    private syncManager: ISyncManager;
+    private uiManager: IUIManager;
+    private persistence: IPersistenceManager;
+    private oscHandlers: Map<string, OscHandler> = new Map();
 
     constructor(
-        effectManager: EffectManager,
-        networkController: NetworkController,
-        syncManager: SyncManager,
-        uiManager: UIManager,
-        persistence: PersistenceManager
+        effectManager: IEffectManager,
+        networkController: INetworkController,
+        syncManager: ISyncManager,
+        uiManager: IUIManager,
+        persistence: IPersistenceManager
     ) {
         this.effectManager = effectManager;
         this.networkController = networkController;
         this.syncManager = syncManager;
         this.uiManager = uiManager;
         this.persistence = persistence;
+
+        this.initOscRouter();
+    }
+
+    public registerOscHandler(address: string, handler: OscHandler) {
+        this.oscHandlers.set(address, handler);
+    }
+
+    private initOscRouter() {
+        this.registerOscHandler('/sceneplus/sys/discover', (_args, senderIp) => {
+            window.api.sendOsc(senderIp, '/sceneplus/sys/discovered', [this.networkController.activeHttpPort]);
+        });
+
+        this.registerOscHandler('/sceneplus/sys/discovered', (_args, senderIp) => {
+            this.networkController.addDiscoveredDevice(senderIp);
+        });
+
+        this.registerOscHandler('/sceneplus/sys/ping', (args, senderIp) => {
+            const port = args[0] || 0;
+            this.networkController.handlePing(senderIp, port);
+        });
+
+        this.registerOscHandler('/sceneplus/sys/pong', (args, senderIp) => {
+            this.networkController.handlePong(senderIp, () => {
+                this.syncManager.syncAssetsWithUplink(senderIp, args[0] || 0);
+            });
+        });
+
+        this.registerOscHandler('/sceneplus/sys/sync-progress', (args) => {
+            const p = args[0];
+            uiLog(`[UPLINK] Sync progress: ${p}%`, 'import');
+        });
     }
 
     public setupBindings() {
@@ -39,6 +70,16 @@ export class RendererIPC {
         window.api.onKeyDown((keyCode: number) => this.effectManager.triggerKey(keyCode, 'down'));
         window.api.onKeyUp((keyCode: number) => this.effectManager.triggerKey(keyCode, 'up'));
 
+        // Transmit OSC trigger signals when in TRANSMIT mode with active connection
+        this.effectManager.onTriggerKey = (type: 'down' | 'up', keyCode: number, effectIds: string[]) => {
+            if (this.networkController.currentMode === 'send' && this.networkController.activeTargetIp) {
+                const oscAddress = type === 'down' ? '/sceneplus/play' : '/sceneplus/stop';
+                for (const id of effectIds) {
+                    window.api.sendOsc(this.networkController.activeTargetIp, oscAddress, [id, keyCode]);
+                }
+            }
+        };
+
         window.api.onPanic(() => {
             uiLog('!!! PANIC !!! ALL EFFECTS KILLED', 'error');
             this.effectManager.panic();
@@ -50,27 +91,15 @@ export class RendererIPC {
         window.api.onOscMessage((msg: { address: string; args: any[]; rinfo: { address: string; port: number } }) => {
             const { address, args, rinfo } = msg;
             const senderIp = rinfo.address;
-            if (address === '/sceneplus/sys/ping') {
-                const port = args[0] || 0;
-                this.networkController.handlePing(senderIp, port);
-                return;
-            }
 
-            if (address === '/sceneplus/sys/pong') {
-                this.networkController.handlePong(senderIp, () => {
-                    this.syncManager.syncAssetsWithUplink(senderIp, args[0] || 0);
-                });
-                return;
-            }
-            
-            if (address === '/sceneplus/sys/sync-progress') {
-                const p = args[0];
-                uiLog(`[UPLINK] Sync progress: ${p}%`, 'import');
+            const registeredHandler = this.oscHandlers.get(address);
+            if (registeredHandler) {
+                registeredHandler(args, senderIp);
                 return;
             }
 
             // Route standard OSC triggers to EffectManager
-            if (this.networkController.currentMode === 'receive') {
+            if (this.networkController.currentMode === 'receive' || address.startsWith('/sceneplus/')) {
                 this.effectManager.handleOscTrigger(address, args);
             }
         });

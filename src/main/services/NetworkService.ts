@@ -125,12 +125,20 @@ export class NetworkService {
             }
             
             for (const subnet of subnets) {
+                // Send UDP broadcast to subnet broadcast address first for fast detection
+                try {
+                    const bClient = new Client(`${subnet}.255`, 8000);
+                    bClient.send('/sceneplus/sys/discover', () => {
+                        try { bClient.close(); } catch(e) {}
+                    });
+                } catch(e) {}
+
                 for (let i = 1; i <= 254; i++) {
                     const ip = `${subnet}.${i}`;
                     try {
                         const c = new Client(ip, 8000);
                         c.send('/sceneplus/sys/discover', () => {
-                            c.close();
+                            try { c.close(); } catch(e) {}
                         });
                     } catch (e) { /* ignore */ }
                 }
