@@ -73,17 +73,26 @@ export class EffectLibrary {
         }
     }
 
+    public onEffectRenamed?: (effectId: string, newName: string) => void;
+
     public addCard(effectId: string, meta: EffectMeta) {
         const card = document.createElement('div');
         card.className = 'effect-card';
         card.draggable = true;
         card.dataset.effectId = effectId;
 
-        let displayName = this.effectManager.effectNames?.[effectId] || effectId;
+        let displayName = this.effectManager.effectNames?.[effectId] || meta.name || effectId;
 
         const titleEl = document.createElement('div');
         titleEl.className = 'card-title';
         titleEl.textContent = displayName;
+        titleEl.title = 'Double click to rename';
+
+        // Double-click on title to rename inline
+        titleEl.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            this._startInlineRename(effectId, meta, titleEl);
+        });
 
         const actionsEl = document.createElement('div');
         actionsEl.className = 'card-actions';
@@ -92,44 +101,31 @@ export class EffectLibrary {
         metaEl.className = 'card-meta';
         metaEl.innerHTML = `<span class="card-type">${meta.mediatype}</span><span class="card-mode">${meta.playmode}</span>`;
 
-        const playBtn = document.createElement('button');
-        playBtn.className = 'card-play-btn';
-        playBtn.innerHTML = '▶';
-
-        playBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const player = this.effectManager.players[effectId];
-            if (!player) return;
-
-            const instance = player.play();
-            if (!instance) return;
-            if (instance.el && (instance.el as any).onended) (instance.el as any).onended = null;
-
-            const stopTimer = setTimeout(() => {
-                player.stopInstance(instance);
-            }, 3000);
-
-            if (instance.el && (meta.mediatype === 'video' || meta.mediatype === 'sound')) {
-                (instance.el as HTMLMediaElement).onended = () => {
-                    clearTimeout(stopTimer);
-                    player.stopInstance(instance);
-                };
-            }
-        });
-
         const btnGroup = document.createElement('div');
         btnGroup.style.display = 'flex';
-        btnGroup.style.gap = '8px';
+        btnGroup.style.gap = '6px';
 
+        // Rename Button (Sleek Pen SVG)
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'card-rename-btn';
+        renameBtn.title = 'Rename Effect';
+        renameBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+        renameBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._startInlineRename(effectId, meta, titleEl);
+        });
+
+        // Delete Button (Sleek Trash SVG)
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'card-delete-btn';
-        deleteBtn.innerHTML = '🗑️';
         deleteBtn.title = 'Delete Effect';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
         deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            const currentName = this.effectManager.effectNames?.[effectId] || meta.name || effectId;
             const ok = await window.api.confirmDialog({
                 message: 'Permanently delete this effect? This action cannot be undone.',
-                detail: `[ ${displayName} ]`
+                detail: `[ ${currentName} ]`
             });
 
             if (ok) {
@@ -151,8 +147,8 @@ export class EffectLibrary {
             }
         });
 
+        btnGroup.appendChild(renameBtn);
         btnGroup.appendChild(deleteBtn);
-        btnGroup.appendChild(playBtn);
 
         actionsEl.appendChild(metaEl);
         actionsEl.appendChild(btnGroup);
@@ -173,5 +169,52 @@ export class EffectLibrary {
         this.container.appendChild(card);
         this.allEffects.push({ effectId, meta, card });
         this._applyFilters();
+    }
+
+    private _startInlineRename(effectId: string, meta: EffectMeta, titleEl: HTMLElement) {
+        if (titleEl.querySelector('input')) return;
+
+        const currentName = this.effectManager.effectNames?.[effectId] || meta.name || effectId;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'card-title-input';
+        input.value = currentName;
+
+        titleEl.textContent = '';
+        titleEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        let committed = false;
+        const commit = () => {
+            if (committed) return;
+            committed = true;
+            const val = input.value.trim();
+            const finalName = val || currentName;
+            titleEl.textContent = finalName;
+            if (!this.effectManager.effectNames) this.effectManager.effectNames = {};
+            this.effectManager.effectNames[effectId] = finalName;
+            meta.name = finalName;
+            if (this.onEffectRenamed && finalName !== currentName) {
+                this.onEffectRenamed(effectId, finalName);
+            }
+        };
+
+        input.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+                commit();
+            } else if (e.key === 'Escape') {
+                input.value = currentName;
+                commit();
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            commit();
+        });
+
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('mousedown', (e) => e.stopPropagation());
     }
 }

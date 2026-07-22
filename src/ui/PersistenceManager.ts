@@ -1,18 +1,22 @@
-import { EffectManager } from '../engine/EffectManager';
+import { IEffectManager } from '../shared/interfaces';
 import { EffectLibrary } from './EffectLibrary';
 import { VirtualKeyboard } from './VirtualKeyboard';
 
 export class PersistenceManager {
-    private effectManager: EffectManager;
+    private effectManager: IEffectManager;
     private effectLibrary: EffectLibrary;
     private virtualKeyboard: VirtualKeyboard;
 
     public state: any;
 
-    constructor(effectManager: EffectManager, effectLibrary: EffectLibrary, virtualKeyboard: VirtualKeyboard) {
+    constructor(effectManager: IEffectManager, effectLibrary: EffectLibrary, virtualKeyboard: VirtualKeyboard) {
         this.effectManager = effectManager;
         this.effectLibrary = effectLibrary;
         this.virtualKeyboard = virtualKeyboard;
+
+        this.effectLibrary.onEffectRenamed = (effectId: string, newName: string) => {
+            this.renameEffect(effectId, newName);
+        };
 
         this.state = {
             currentPreset: 1,
@@ -26,7 +30,9 @@ export class PersistenceManager {
             presets: {
                 1: {}, 2: {}, 3: {}, 4: {},
                 5: {}, 6: {}, 7: {}
-            }
+            },
+            customEffectNames: {},
+            effectParams: {}
         };
     }
 
@@ -49,6 +55,31 @@ export class PersistenceManager {
             }
 
             this.state = { ...this.state, ...settingsResult.settings };
+            
+            if (this.state.customEffectNames) {
+                if (!this.effectManager.effectNames) {
+                    this.effectManager.effectNames = {};
+                }
+                for (const [id, customName] of Object.entries(this.state.customEffectNames)) {
+                    if (customName && typeof customName === 'string') {
+                        this.effectManager.effectNames[id] = customName;
+                        const item = this.effectLibrary.allEffects.find(x => x.effectId === id);
+                        if (item) {
+                            const titleEl = item.card.querySelector('.card-title');
+                            if (titleEl) titleEl.textContent = customName;
+                            item.meta.name = customName;
+                        }
+                    }
+                }
+            }
+            
+            if (this.state.effectParams) {
+                for (const [effectId, params] of Object.entries(this.state.effectParams)) {
+                    for (const [k, v] of Object.entries(params as any)) {
+                        this.effectManager.setParam(effectId, k, v, false);
+                    }
+                }
+            }
             
             if (this.state.engineKey === 64 && this.state.settingsKey === 65) {
                 this.state.engineKey = 66;
@@ -80,7 +111,7 @@ export class PersistenceManager {
 
         this.state.currentPreset = presetIndex;
         
-        (this.virtualKeyboard as any).clearAllInternal();
+        this.virtualKeyboard.clearAllInternal();
 
         const newBindings = this.state.presets[presetIndex] || {};
         for (const [keyCode, effectIds] of Object.entries(newBindings)) {
@@ -102,18 +133,55 @@ export class PersistenceManager {
         if (this.effectLibrary && typeof this.effectLibrary._applyFilters === 'function') {
             this.effectLibrary._applyFilters();
         }
+
+        this.syncAssignedKeysToMain();
     }
 
     public updateConfig(configOverrides: any) {
         this.state = { ...this.state, ...configOverrides };
         this.effectManager.maxN = this.state.maxN;
         window.api.setSystemKeys(this.state.engineKey, this.state.settingsKey);
+        this.syncAssignedKeysToMain();
         this.save();
+    }
+
+    public async loadState(newState?: any) {
+        if (!newState) {
+            return this.restore();
+        }
+        
+        this.state = { ...this.state, ...newState };
+        this.effectManager.maxN = this.state.maxN;
+        if (this.state.engineKey && this.state.settingsKey) {
+            await window.api.setSystemKeys(this.state.engineKey, this.state.settingsKey);
+        }
+        this.switchPreset(this.state.currentPreset, true);
     }
 
     public async save() {
         this.state.presets[this.state.currentPreset] = { ...this.effectManager.keyBindings };
+        this.state.effectParams = { ...this.effectManager.effectParams };
+        this.syncAssignedKeysToMain();
         await window.api.saveSettings(this.state);
+    }
+
+    private syncAssignedKeysToMain() {
+        const assignedKeyCodes: number[] = [];
+        for (const [keyCodeStr, effectIds] of Object.entries(this.effectManager.keyBindings || {})) {
+            if (Array.isArray(effectIds) && effectIds.length > 0) {
+                const code = parseInt(keyCodeStr, 10);
+                if (!isNaN(code)) assignedKeyCodes.push(code);
+            }
+        }
+        window.api.setAssignedKeys(assignedKeyCodes, !!this.state.blockAssignedKeys);
+    }
+
+    public renameEffect(effectId: string, newName: string) {
+        if (!this.state.customEffectNames) this.state.customEffectNames = {};
+        this.state.customEffectNames[effectId] = newName;
+        if (!this.effectManager.effectNames) this.effectManager.effectNames = {};
+        this.effectManager.effectNames[effectId] = newName;
+        this.save();
     }
 
     private _nameFromMeta(meta: any) {

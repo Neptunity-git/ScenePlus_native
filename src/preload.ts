@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
 import { AppState, ImportResult, NetworkInterfaceInfo, CaptureResult, ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from './shared/types';
 
 export const api = {
@@ -8,14 +8,24 @@ export const api = {
     onKeyDown: (callback: (keycode: number) => void) => ipcRenderer.on('keydown', (_event, keycode) => callback(keycode)),
     onKeyUp: (callback: (keycode: number) => void) => ipcRenderer.on('keyup', (_event, keycode) => callback(keycode)),
     onMouseMove: (callback: (pos: { x: number; y: number }) => void) => ipcRenderer.on('mousemove', (_event, pos) => callback(pos)),
+    onMouseDown: (callback: (data: { button: number; x: number; y: number; clicks: number }) => void) => ipcRenderer.on('mousedown', (_event, data) => callback(data)),
+    onMouseUp: (callback: (data: { button: number; x: number; y: number }) => void) => ipcRenderer.on('mouseup', (_event, data) => callback(data)),
+    onMouseWheel: (callback: (data: { x: number; y: number; amount: number; direction: number; rotation: number }) => void) => ipcRenderer.on('mousewheel', (_event, data) => callback(data)),
 
     // Effect management
     unpackEffect: (buffer: ArrayBuffer, effectId: string): Promise<{success: boolean; meta?: any; effectId?: string; basePath?: string; error?: string}> => ipcRenderer.invoke('unpack-effect', buffer, effectId),
     importEffectBackground: (sourcePath: string, customDestOrIsGuest?: string | boolean): Promise<ImportResult> => ipcRenderer.invoke('import-effect-background', sourcePath, customDestOrIsGuest),
-    openDocument: (docName: string) => ipcRenderer.invoke('open-document', docName),
+    readDoc: (docName: string): Promise<{success: boolean; content?: string; error?: string}> => ipcRenderer.invoke('read-doc', docName),
+    exportDoc: (docName: string, content: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('export-doc', docName, content),
     deleteEffect: (effectId: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('delete-effect', effectId),
     scanEffects: (): Promise<{success: boolean; effects?: any[]; error?: string}> => ipcRenderer.invoke('scan-effects'),
     captureScreen: (resolution: string): Promise<CaptureResult> => ipcRenderer.invoke('capture-screen', resolution),
+    
+    // Effect Composer
+    openEffectComposer: (): Promise<{success: boolean}> => ipcRenderer.invoke('open-effect-composer'),
+    saveComposedEffect: (meta: string, assetData: any): Promise<{success: boolean; hash?: string; error?: string}> => ipcRenderer.invoke('save-composed-effect', meta, assetData),
+    selectAssetFile: (filters?: any[]): Promise<{canceled: boolean; file: string | null}> => ipcRenderer.invoke('select-asset-file', filters),
+    onEffectComposed: (callback: (data: { hash: string; meta: any; basePath: string }) => void) => ipcRenderer.on('effect-composed', (_event, data) => callback(data)),
 
     // Listeners for progress
     onImportProgress: (callback: (percent: number) => void) => ipcRenderer.on('import-progress', (_event, value) => callback(value)),
@@ -26,8 +36,10 @@ export const api = {
 
     // Persistence & Settings
     setSystemKeys: (engineCode?: number, settingsCode?: number): Promise<{success: boolean}> => ipcRenderer.invoke('set-system-keys', engineCode, settingsCode),
+    setAssignedKeys: (keyCodes: number[], blockAssignedKeys?: boolean): Promise<{success: boolean}> => ipcRenderer.invoke('set-assigned-keys', keyCodes, blockAssignedKeys),
     saveSettings: (settings: SettingsConfig): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('save-settings', settings),
     loadSettings: (): Promise<{success: boolean; settings: SettingsConfig | null; error?: string}> => ipcRenderer.invoke('load-settings'),
+    setAppState: (state: Partial<AppState>): Promise<{success: boolean}> => ipcRenderer.invoke('set-app-state', state),
 
     // Async Dialogs
     confirmDialog: (options: ConfirmDialogOptions): Promise<boolean> => ipcRenderer.invoke('confirm-dialog', options),
@@ -50,7 +62,10 @@ export const api = {
     // WebUtils for path resolution (Electron 28+)
     getPathForFile: (file: File): string => {
         return webUtils.getPathForFile(file);
-    }
+    },
+
+    // UI Scaling
+    setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor)
 };
 
 contextBridge.exposeInMainWorld('api', api);

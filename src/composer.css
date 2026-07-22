@@ -1,0 +1,122 @@
+/* composer.css */
+body {
+    background-color: #050505;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.composer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.composer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--neon-blue, #00f3ff);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.composer-header h2 {
+    margin: 0;
+    color: var(--neon-blue, #00f3ff);
+    text-shadow: 0 0 5px var(--neon-blue, #00f3ff);
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+}
+
+.composer-steps span {
+    font-size: 0.8rem;
+    margin-left: 15px;
+    color: #555;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.composer-steps span.active {
+    color: var(--neon-accent, #ff0055);
+    text-shadow: 0 0 5px var(--neon-accent, #ff0055);
+}
+
+.composer-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.composer-desc {
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.cyber-textarea {
+    flex: 1;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    color: #00ff00;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 15px;
+    resize: none;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.cyber-textarea::-webkit-scrollbar {
+    display: none;
+}
+
+.cyber-textarea:focus {
+    outline: none;
+    border-color: var(--neon-blue, #00f3ff);
+    box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+.asset-file-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    border: 1px dashed var(--neon-blue, #00f3ff);
+    background: rgba(0, 243, 255, 0.05);
+    margin-bottom: 20px;
+}
+
+.file-display {
+    font-size: 1.2rem;
+    color: var(--neon-blue, #00f3ff);
+    margin-bottom: 20px;
+    word-break: break-all;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.composer-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.error-box {
+    color: var(--neon-red, #ff003c);
+    border: 1px solid var(--neon-red, #ff003c);
+    background: rgba(255, 0, 60, 0.1);
+    padding: 10px;
+    margin-bottom: 20px;
+    font-weight: bold;
+}

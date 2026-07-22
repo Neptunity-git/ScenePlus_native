@@ -5,7 +5,7 @@ import { WindowManager } from './WindowManager';
 import { NetworkService } from './services/NetworkService';
 import { EffectService } from './services/EffectService';
 import { InputManager } from './InputManager';
-import { ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from '../shared/types';
+import { ConfirmDialogOptions, AlertDialogOptions, SettingsConfig, AppState } from '../shared/types';
 
 export class IpcHandler {
     constructor(
@@ -65,6 +65,11 @@ export class IpcHandler {
             return { success: true };
         });
 
+        ipcMain.handle('set-assigned-keys', async (event, keyCodes, blockAssignedKeys) => {
+            this.inputManager.setAssignedKeys(keyCodes, blockAssignedKeys);
+            return { success: true };
+        });
+
         // --- Screen Capture ---
         ipcMain.handle('capture-screen', async (event, resolution) => {
             try {
@@ -73,8 +78,9 @@ export class IpcHandler {
                 else if (resolution === 'high') { width = 1920; height = 1080; }
                 else if (resolution === 'full') {
                     const primaryDisplay = screen.getPrimaryDisplay();
-                    width = primaryDisplay.bounds.width;
-                    height = primaryDisplay.bounds.height;
+                    const scaleFactor = primaryDisplay.scaleFactor;
+                    width = Math.round(primaryDisplay.bounds.width * scaleFactor);
+                    height = Math.round(primaryDisplay.bounds.height * scaleFactor);
                 }
                 
                 const sources = await desktopCapturer.getSources({ 
@@ -129,27 +135,33 @@ export class IpcHandler {
         });
 
         // --- Documents Viewer ---
-        ipcMain.handle('open-document', async (event, docName) => {
-            const docPath = path.join(app.getAppPath(), 'assets', docName);
+        ipcMain.handle('read-doc', async (event, docName) => {
+            const docPath = path.join(app.getAppPath(), 'assets/docs', docName);
             if (!fs.existsSync(docPath)) {
-                console.error(`[DOCS] Document not found: ${docPath}`);
-                return;
+                return { success: false, error: 'Document not found' };
             }
+            try {
+                const content = fs.readFileSync(docPath, 'utf8');
+                return { success: true, content };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
+        });
 
-            const docWindow = new BrowserWindow({
-                width: 1000,
-                height: 800,
-                title: `ScenePlus+ | ${docName.replace(/_/g, ' ').replace('.html', '')}`,
-                icon: path.join(app.getAppPath(), 'assets/logo_ScenePlus+.ico'),
-                autoHideMenuBar: true,
-                webPreferences: {
-                    nodeIntegration: false,
-                    contextIsolation: true
-                }
+        ipcMain.handle('export-doc', async (event, docName, content) => {
+            if (!mainWindow) return { success: false, error: 'No main window' };
+            const result = await dialog.showSaveDialog(mainWindow, {
+                title: 'Export Document',
+                defaultPath: docName,
+                filters: [{ name: 'Markdown Document', extensions: ['md'] }]
             });
-
-            docWindow.setMenuBarVisibility(false);
-            docWindow.loadFile(docPath);
+            if (result.canceled || !result.filePath) return { success: false, error: 'Canceled' };
+            try {
+                fs.writeFileSync(result.filePath, content, 'utf8');
+                return { success: true };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
         });
 
         // --- Settings (Legacy directly in IpcHandler for now) ---
@@ -171,6 +183,87 @@ export class IpcHandler {
             } catch (err: any) {
                 return { success: false, error: err.message };
             }
+        });
+
+        // --- Effect Composer ---
+        ipcMain.handle('open-effect-composer', async () => {
+            const composerWindow = new BrowserWindow({
+                width: 900,
+                height: 700,
+                autoHideMenuBar: true,
+                title: "Effect Composer",
+                backgroundColor: '#000000',
+                icon: path.join(app.getAppPath(), 'assets/system/logo_ScenePlus+.ico'),
+                webPreferences: {
+                    preload: path.join(app.getAppPath(), 'out/preload.js'),
+                    contextIsolation: true,
+                    nodeIntegration: false,
+                }
+            });
+            composerWindow.setAlwaysOnTop(true, 'pop-up-menu');
+            composerWindow.loadFile(path.join(app.getAppPath(), 'out/composer.html'));
+            return { success: true };
+        });
+
+        ipcMain.handle('save-composed-effect', async (event, metaText: string, assetData: any) => {
+            try {
+                const meta = JSON.parse(metaText);
+                const crypto = require('crypto');
+                const hash = crypto.createHash('sha256').update(metaText + Date.now().toString()).digest('hex');
+                const destDir = path.join(app.getPath('userData'), 'effects', hash);
+                fs.mkdirSync(destDir, { recursive: true });
+                
+                // Write meta.json
+                fs.writeFileSync(path.join(destDir, 'meta.json'), metaText, 'utf8');
+
+                // Process Asset
+                let mainFile = 'index.js';
+                if (meta.path) {
+                    mainFile = meta.path.replace(/^\//, ''); // Remove leading slash if any
+                }
+                
+                if (assetData.type === 'text') {
+                    fs.writeFileSync(path.join(destDir, mainFile), assetData.content, 'utf8');
+                } else if (assetData.type === 'file') {
+                    const srcPath = assetData.path;
+                    if (fs.existsSync(srcPath)) {
+                        // Keep original filename or use path if it's specified exactly
+                        const targetName = meta.path ? meta.path.replace(/^\//, '') : path.basename(srcPath);
+                        fs.copyFileSync(srcPath, path.join(destDir, targetName));
+                    } else {
+                        throw new Error(`Asset file not found: ${srcPath}`);
+                    }
+                }
+                
+                if (mainWindow) {
+                    mainWindow.webContents.send('effect-composed', {
+                        hash,
+                        meta,
+                        basePath: `scene://${hash}/`
+                    });
+                }
+
+                return { success: true, hash };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
+        });
+
+        ipcMain.handle('select-asset-file', async (event, filters) => {
+            if (!mainWindow) return { canceled: true, file: null };
+            const result = await dialog.showOpenDialog(mainWindow, {
+                title: 'Select Asset File',
+                filters: filters || [],
+                properties: ['openFile'],
+            });
+            if (result.canceled || result.filePaths.length === 0) return { canceled: true, file: null };
+            return { canceled: false, file: result.filePaths[0] };
+        });
+
+        // --- App State ---
+        ipcMain.handle('set-app-state', async (event, newState: Partial<AppState>) => {
+            this.windowManager.setState(newState);
+            return { success: true };
         });
     }
 }

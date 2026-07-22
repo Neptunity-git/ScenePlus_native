@@ -3,72 +3,87 @@ import { VirtualKeyboard } from './ui/VirtualKeyboard';
 import { EffectLibrary } from './ui/EffectLibrary';
 import { PersistenceManager } from './ui/PersistenceManager';
 import { ConfigModal } from './ui/ConfigModal';
-import { uiLog, setupModeInfoPanel, markLogUnread, getKeyLabel } from './ui/UILogger';
+import { uiLog, setupModeInfoPanel } from './ui/UILogger';
+import { DocsViewer } from './ui/DocsViewer';
 
-const diagModal = document.getElementById('diagnostic-modal') as HTMLElement;
-const diagErrorMsg = document.getElementById('diag-error-msg') as HTMLElement;
-const diagTemplateArea = document.getElementById('diag-template-area') as HTMLTextAreaElement;
-const btnCloseDiag = document.getElementById('btn-close-diag') as HTMLElement;
-const btnCopyDiag = document.getElementById('btn-copy-diag') as HTMLElement;
+import { NetworkController } from './network/NetworkController';
+import { SyncManager } from './network/SyncManager';
+import { UIManager } from './ui/UIManager';
+import { RendererIPC } from './ipc/RendererIPC';
 
-const indicatorSync = document.getElementById('sync-indicator') as HTMLElement;
-let activeSyncCount = 0;
+// Setup OS UI Scaling (Fit both width and height without micro-fluctuations)
+let currentZoom = 0;
+function initZoom() {
+    const baseWidth = 1280;
+    const baseHeight = 720;
+    const currentWidth = window.innerWidth || window.screen.width;
+    const currentHeight = window.innerHeight || window.screen.height;
+    
+    // Scale proportionally to fit within both dimensions
+    const newZoom = Math.min(currentWidth / baseWidth, currentHeight / baseHeight);
+    
+    // Threshold check (2%) to prevent subpixel rounding & resize feedback loops
+    if (Math.abs(newZoom - currentZoom) > 0.02) {
+        currentZoom = newZoom;
+        window.api.setZoomFactor(newZoom);
+    }
+}
+initZoom();
+window.addEventListener('resize', initZoom);
 
-const effectManager = new EffectManager(5);
+// Core Managers
+const effectManager = new EffectManager(1); // Reduced poolSize
 const virtualKeyboard = new VirtualKeyboard('keyboard-grid', effectManager);
 const effectLibrary = new EffectLibrary('library-grid', effectManager);
 const persistence = new PersistenceManager(effectManager, effectLibrary, virtualKeyboard);
+virtualKeyboard.onAssignmentChanged = () => persistence.save();
 const configModal = new ConfigModal(persistence);
+const docsViewer = new DocsViewer();
 
-const offIndicator = document.getElementById('off-indicator') as HTMLElement;
-const settingsPanel = document.getElementById('settings-panel') as HTMLElement;
-const libraryGrid = document.getElementById('library-grid') as HTMLElement;
-const btnAddEffect = document.getElementById('btn-add-effect') as HTMLElement;
+// Docs Binding
+document.getElementById('btn-doc-guide')?.addEventListener('click', () => {
+    docsViewer.openDocument('Official_Guide_For_Creators.md', 'CREATOR GUIDE');
+});
+document.getElementById('btn-doc-tos-user')?.addEventListener('click', () => {
+    docsViewer.openDocument('ToS_For_Users.md', 'USER TERMS OF SERVICE');
+});
+document.getElementById('btn-doc-tos-creator')?.addEventListener('click', () => {
+    docsViewer.openDocument('ToS_For_Creators.md', 'CREATOR TERMS OF SERVICE');
+});
 
-const importOverlay = document.getElementById('import-overlay') as HTMLElement;
-const importBar = document.getElementById('import-progress-bar') as HTMLElement;
-const importStatusText = document.getElementById('import-status-text') as HTMLElement;
-const importPercentText = document.getElementById('import-percent-text') as HTMLElement;
-let isImporting = false;
+// Composer Binding
+document.getElementById('btn-make-fx')?.addEventListener('click', () => {
+    window.api.openEffectComposer();
+});
 
-let currentNetworkMode = 'neutral';
-let activeTargetIp = '';
-let activeHttpPort = 0;
-let pendingTargetIp = '';
-let pingTimeoutId: any = null;
-
-let discoveredDevices: string[] = [];
-let receivedConnections = new Map<string, {port: number, lastSeen: number}>();
-
-setupModeInfoPanel(async (mode: string) => {
-    currentNetworkMode = mode;
-    activeTargetIp = ''; 
-    pendingTargetIp = '';
-    activeHttpPort = 0;
-    if (pingTimeoutId) clearTimeout(pingTimeoutId);
-    pingTimeoutId = null;
-    
-    if (mode === 'neutral') {
-        await window.api.stopOscServer();
-        await window.api.stopHttpServer();
-    } else {
-        const startRes = await window.api.startOscServer();
-        if (!startRes.success) {
-            uiLog('Failed to bind UDP port 8000', 'error');
-        }
-        
-        if (mode === 'send') {
-            const httpRes = await window.api.startHttpServer();
-            if (httpRes.success && httpRes.port) {
-                activeHttpPort = httpRes.port;
-            } else {
-                uiLog(`Failed to start HTTP server: ${httpRes.error}`, 'error');
-            }
-        } else {
-            await window.api.stopHttpServer();
-        }
+window.api.onEffectComposed((data: any) => {
+    if (effectLibrary.allEffects.some(e => e.effectId === data.hash)) {
+        return;
     }
+    const displayName = data.meta.name || data.hash;
+    effectManager.registerEffect(data.hash, data.meta, data.basePath);
+    effectManager.effectNames = effectManager.effectNames || {};
+    effectManager.effectNames[data.hash] = displayName;
+    effectLibrary.addCard(data.hash, data.meta);
+    uiLog(`✔ Composed [${displayName}]  ${data.meta.mediatype}/${data.meta.playmode}`, 'import');
+});
+
+// Sub Controllers
+const syncManager = new SyncManager(effectManager, effectLibrary, persistence);
+const networkController = new NetworkController((ip, port) => {
+    syncManager.syncAssetsWithUplink(ip, port);
+});
+const uiManager = new UIManager(effectManager, effectLibrary, persistence, virtualKeyboard, configModal, networkController);
+
+// IPC Router
+const ipc = new RendererIPC(effectManager, networkController, syncManager, uiManager, persistence);
+ipc.setupBindings();
+
+// UI Mode Switcher
+setupModeInfoPanel(async (mode: string) => {
+    await networkController.setMode(mode);
     
+    // UI specific logic for mode switching
     if (mode === 'receive') {
         const allIps = await window.api.getAllLocalIps();
         const ipListEl = document.getElementById('osc-local-ip-list');
@@ -92,602 +107,93 @@ setupModeInfoPanel(async (mode: string) => {
             devs.style.color = 'var(--text-muted)';
             devs.style.textShadow = 'none';
         }
-        receivedConnections.clear();
-        
-        uiLog('RECEIVE MODE: Listening on port 8000', 'import');
     } else if (mode === 'send') {
-        uiLog('TRANSMIT: Scan or enter IP manually', 'default');
-        
-        const btnScan = document.getElementById('btn-osc-scan');
-        const deviceList = document.getElementById('osc-device-list');
-        const btnConnect = document.getElementById('btn-osc-connect');
-        const inputIp = document.getElementById('osc-target-ip') as HTMLInputElement;
-        
-        if (btnScan && deviceList) {
-            btnScan.addEventListener('click', async () => {
-                btnScan.textContent = 'SCANNING...';
-                btnScan.style.color = 'var(--neon-yellow)';
-                btnScan.style.borderColor = 'var(--neon-yellow)';
-                deviceList.innerHTML = '';
-                discoveredDevices = [];
-                
-                uiLog('Scanning local subnets...', 'default');
-                const result = await window.api.scanSubnet();
-                if (result.subnets) {
-                    uiLog(`Scanning ${result.subnets.length} subnet(s): ${result.subnets.join(', ')}`, 'default');
+        const oscScanBtn = document.getElementById('btn-osc-scan');
+        if (oscScanBtn) {
+            oscScanBtn.onclick = () => {
+                networkController.discoveredDevices = [];
+                if (networkController.onDiscoveredDevicesChanged) {
+                    networkController.onDiscoveredDevicesChanged([]);
                 }
-                
-                setTimeout(() => {
-                    btnScan.textContent = 'SCAN NETWORK';
-                    btnScan.style.color = '';
-                    btnScan.style.borderColor = '';
-                    if (discoveredDevices.length === 0) {
-                        deviceList.innerHTML = '<div style="color: var(--text-muted); text-align: center; font-size: 0.8rem; padding: 5px;">(No devices found)</div>';
-                        uiLog('No receivers found on LAN', 'error');
-                    } else {
-                        uiLog(`Found ${discoveredDevices.length} receiver(s)`, 'import');
-                    }
-                }, 2000);
-            });
-        }
-        
-        if (btnConnect && inputIp) {
-            const doConnect = () => {
-                let ipStr = inputIp.value.trim();
-                if (!ipStr) {
-                    uiLog('ERROR: IP is empty', 'error');
-                    return;
-                }
-                if (ipStr.includes(':')) {
-                    ipStr = ipStr.split(':')[0];
-                    inputIp.value = ipStr;
-                }
-                const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-                if (ipv4Regex.test(ipStr)) {
-                    attemptConnection(ipStr, btnConnect);
-                } else {
-                    uiLog('ERROR: Invalid IPv4 format', 'error');
-                }
+                uiLog('[SCAN] Scanning local network for ScenePlus nodes...', 'default');
+                window.api.scanSubnet();
             };
-            btnConnect.addEventListener('click', doConnect);
-            inputIp.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') doConnect();
-            });
+        }
+        const oscConnectBtn = document.getElementById('btn-osc-connect');
+        const manualIpInput = document.getElementById('osc-target-ip') as HTMLInputElement;
+        if (oscConnectBtn && manualIpInput) {
+            oscConnectBtn.onclick = () => {
+                const ip = manualIpInput.value.trim();
+                if (!ip) return;
+                networkController.attemptConnection(ip, () => {
+                    // on Timeout
+                });
+            };
         }
     }
 });
 
-function attemptConnection(ip: string, btn: HTMLElement | null) {
-    pendingTargetIp = ip;
-    if (btn) {
-        btn.textContent = 'CONNECTING...';
-        btn.style.borderColor = 'var(--neon-yellow)';
-        btn.style.color = 'var(--neon-yellow)';
-    }
-    uiLog(`PINGING ${ip}...`, 'default');
-    window.api.sendOsc(ip, '/sceneplus/sys/ping', [activeHttpPort]);
-    
-    if (pingTimeoutId) clearTimeout(pingTimeoutId);
-    pingTimeoutId = setTimeout(() => {
-        uiLog(`CONNECTION FAILED: No response from ${ip}`, 'error');
-        if (btn) {
-            btn.textContent = 'CONNECT';
-            btn.style.borderColor = '';
-            btn.style.color = '';
-        }
-        pendingTargetIp = '';
-    }, 2000);
-}
-
-function addDiscoveredDevice(ip: string) {
-    if (discoveredDevices.includes(ip)) return;
-    discoveredDevices.push(ip);
-    
-    const deviceList = document.getElementById('osc-device-list');
-    if (!deviceList) return;
-    
-    const item = document.createElement('div');
-    item.className = 'osc-device-item';
-    item.textContent = ip;
-    item.style.cssText = 'background: rgba(20, 250, 200, 0.05); border: 1px solid rgba(20, 250, 200, 0.3); padding: 6px 8px; margin-bottom: 4px; font-family: monospace; font-size: 0.85rem; color: var(--neon-cyan); cursor: pointer; text-align: center; transition: all 0.2s;';
-    item.addEventListener('mouseenter', () => {
-        item.style.background = 'rgba(20, 250, 200, 0.15)';
-        item.style.boxShadow = '0 0 8px rgba(20, 250, 200, 0.3)';
+// Render discovered devices in TRANSMIT mode
+networkController.onDiscoveredDevicesChanged = (devices: string[]) => {
+    uiManager.renderDiscoveredDevicesList(devices, (ip: string) => {
+        networkController.attemptConnection(ip, () => {
+            // on Timeout
+        });
     });
-    item.addEventListener('mouseleave', () => {
-        item.style.background = 'rgba(20, 250, 200, 0.05)';
-        item.style.boxShadow = 'none';
-    });
-    item.addEventListener('click', () => {
-        attemptConnection(ip, null);
-    });
-    deviceList.appendChild(item);
-}
-
-function refreshConnectedDevicesUI() {
-    const devs = document.getElementById('osc-connected-devices');
-    if (!devs) return;
-
-    if (receivedConnections.size === 0) {
-        devs.textContent = '(NONE)';
-        devs.style.color = 'var(--text-muted)';
-        devs.style.textShadow = 'none';
-        return;
-    }
-
-    const ips = Array.from(receivedConnections.keys());
-    devs.textContent = ips.join(', ');
-    devs.style.color = 'var(--neon-green)';
-    devs.style.textShadow = '0 0 5px var(--neon-green)';
-}
-
-persistence.restore().then(() => {
-    uiLog('Session restored from disk.', 'import');
-    refreshPresetNamesUI(persistence.state.presetNames);
-}).catch((err: any) => {
-    uiLog(`Restore failed: ${err.message}`, 'error');
-});
-
-configModal.onConfigSaved = (newNames: Record<number, string>) => {
-    refreshPresetNamesUI(newNames);
-    uiLog('Global System Configuration Saved', 'default');
 };
 
-function updateSyncIndicator() {
-    if (!indicatorSync) return;
-    if (activeSyncCount > 0) {
-        indicatorSync.classList.remove('hidden');
-    } else {
-        indicatorSync.classList.add('hidden');
-    }
+// Render connected devices in RECEIVE mode
+networkController.onReceivedConnectionsChanged = (connections) => {
+    uiManager.renderConnectedDevices(connections);
+};
+
+// Render active target status in TRANSMIT mode
+networkController.onActiveTargetChanged = (targetIp: string) => {
+    uiManager.renderActiveTargetStatus(targetIp);
+};
+
+// Global Window State
+let engineOn = true;
+let settingsOpen = false;
+
+const offIndicator = document.getElementById('off-indicator');
+const settingsPanel = document.getElementById('settings-panel');
+
+export function toggleEngine() {
+    window.api.setAppState({ engineOn: !engineOn });
 }
 
-const configBtn = document.querySelector('.cyber-btn.icon');
-if (configBtn) {
-    configBtn.addEventListener('click', () => {
-        configModal.open(currentNetworkMode);
-    });
+export function toggleSettings() {
+    window.api.setAppState({ settingsOpen: !settingsOpen });
 }
 
-const presetBtns = document.querySelectorAll('.cyber-btn.preset');
-presetBtns.forEach((btn, idx) => {
-    btn.addEventListener('click', () => {
-        persistence.switchPreset(idx + 1);
-        uiLog(`Switched to Preset ${idx + 1}`, 'default');
-    });
-});
+window.api.onStateChanged((state: any) => {
+    engineOn = state.engineOn;
+    settingsOpen = state.settingsOpen;
 
-function refreshPresetNamesUI(namesObj: Record<string, string>) {
-    if (!namesObj) return;
-    presetBtns.forEach((btn, idx) => {
-        const i = (idx + 1).toString();
-        if (namesObj[i]) btn.textContent = namesObj[i];
-    });
-}
-
-virtualKeyboard.onAssignmentChanged = () => persistence.save();
-
-let lastSettingsOpen = false;
-window.api.onStateChanged((state) => {
-    if (configModal) configModal.close();
-    if (virtualKeyboard) virtualKeyboard.dismissPopup();
-    if (diagModal) diagModal.classList.add('hidden');
-
-    if (state.settingsOpen) {
-        settingsPanel.classList.remove('hidden');
-        effectLibrary._applyFilters();
+    if (engineOn) {
+        if (offIndicator) offIndicator.classList.add('hidden');
+        uiLog('Engine ON', 'default');
     } else {
-        if (lastSettingsOpen) {
-            markLogUnread();
-        }
-        settingsPanel.classList.add('hidden');
-    }
-    lastSettingsOpen = state.settingsOpen;
-
-    if (!state.engineOn && !state.settingsOpen) {
-        offIndicator.classList.remove('hidden');
-    } else {
-        offIndicator.classList.add('hidden');
-    }
-});
-
-window.currentMousePos = { x: 0, y: 0 };
-window.api.onMouseMove((pos) => {
-    window.currentMousePos = pos;
-    document.querySelectorAll('iframe').forEach(ifr => {
-       if (ifr.contentWindow) {
-           ifr.contentWindow.postMessage({ source: 'sceneplus-engine', type: 'mousemove', pos }, '*');
-       }
-    });
-});
-
-window.addEventListener('message', async (e) => {
-    const msg = e.data;
-    if (!msg || msg.source !== 'sceneplus-effect') return;
-
-    if (msg.type === 'finish') {
-        const players = Object.values(effectManager.players);
-        for (const p of players) {
-            for (const inst of p.pool) {
-                if ((inst.el as HTMLIFrameElement).contentWindow === e.source) {
-                    p.hardStopInstance(inst);
-                    effectManager.activeGroups.forEach(g => {
-                        g.entries = g.entries.filter(en => en.instance.active);
-                    });
-                    effectManager.activeGroups = effectManager.activeGroups.filter(g => g.entries.length > 0);
-                }
-            }
-        }
-    } else if (msg.type === 'capture') {
-        const result = await window.api.captureScreen(msg.resolution);
-        if (e.source) {
-            (e.source as Window).postMessage({
-                source: 'sceneplus-engine',
-                type: 'capture-response',
-                id: msg.id,
-                dataUrl: result.dataUrl,
-                error: result.error
-            }, '*');
-        }
-    }
-});
-
-window.api.onImportProgress((percent) => {
-    if (importBar) importBar.style.width = `${percent}%`;
-    if (importPercentText) importPercentText.textContent = `${percent}%`;
-});
-
-window.api.onImportStatus((message) => {
-    if (importStatusText) importStatusText.textContent = message.toUpperCase();
-});
-
-window.api.onPanic(() => {
-    effectManager.panic();
-    uiLog('PANIC: all effects killed', 'error');
-
-    if (currentNetworkMode === 'send' && activeTargetIp) {
-        window.api.sendOsc(activeTargetIp, `/sceneplus/sys/panic`, []);
-        uiLog(`[TX] PANIC Sent to ${activeTargetIp}`, 'error');
-    }
-});
-
-window.api.onKeyDown((keycode) => {
-    const keyStr = keycode.toString();
-    const effectIds = effectManager.keyBindings[keyStr] || [];
-
-    if (currentNetworkMode !== 'receive') {
-        effectManager.triggerDown(keycode);
-    }
-
-    if (effectIds.length > 0) {
-        effectIds.forEach(id => {
-            const name = effectManager.effectNames?.[id] || id.split('-')[0];
-            const label = getKeyLabel(keycode);
-
-            if (currentNetworkMode === 'send') {
-                if (activeTargetIp) {
-                    window.api.sendOsc(activeTargetIp, `/sceneplus/remote/down`, [id, keycode]);
-                    uiLog(`[TX] ▶ [${name}]`, 'fire');
-                } else {
-                    uiLog(`▶ [${name}] (TX FAILED: NO TARGET IP)`, 'error');
-                }
-            } else if (currentNetworkMode === 'neutral') {
-                uiLog(`▶ [${name}]  key=${label}`, 'fire');
-            }
-        });
-    }
-});
-
-window.api.onKeyUp((keycode) => {
-    const keyStr = keycode.toString();
-    const effectIds = effectManager.keyBindings[keyStr] || [];
-
-    if (currentNetworkMode !== 'receive') {
-        effectManager.triggerUp(keycode);
-    }
-
-    if (currentNetworkMode === 'send' && effectIds.length > 0 && activeTargetIp) {
-        effectIds.forEach(id => {
-            window.api.sendOsc(activeTargetIp, `/sceneplus/remote/up`, [id, keycode]);
-        });
-    }
-});
-
-window.api.onOscMessage(async (msg: any) => {
-    if (currentNetworkMode === 'send') {
-        if (msg.address === '/sceneplus/sys/pong') {
-            const responderIp = msg.rinfo?.address;
-            if (pendingTargetIp) {
-                clearTimeout(pingTimeoutId);
-                pingTimeoutId = null;
-                activeTargetIp = pendingTargetIp;
-                pendingTargetIp = '';
-                
-                uiLog(`UPLINK SECURED: Connected to ${activeTargetIp}`, 'fire');
-                const btnConnect = document.getElementById('btn-osc-connect');
-                if (btnConnect) {
-                    btnConnect.textContent = 'CONNECTED';
-                    btnConnect.style.borderColor = 'var(--neon-green)';
-                    btnConnect.style.color = 'var(--neon-green)';
-                }
-            }
-        } else if (msg.address === '/sceneplus/sys/announce') {
-            const deviceIp = msg.rinfo?.address;
-            const localIps = await window.api.getAllLocalIps();
-            const localIpList = localIps.map(e => e.ip);
-            if (deviceIp && !localIpList.includes(deviceIp)) {
-                addDiscoveredDevice(deviceIp);
-            }
-        }
-        return;
-    }
-
-    if (currentNetworkMode !== 'receive') return;
-    
-    if (msg.address === '/sceneplus/sys/discover') {
-        const senderIp = msg.rinfo?.address || 'unknown';
-        if (senderIp !== 'unknown') {
-            window.api.sendOsc(senderIp, '/sceneplus/sys/announce', []);
-        }
-        return;
-    }
-
-    if (msg.address === '/sceneplus/sys/ping') {
-        const senderIp = msg.rinfo?.address || 'unknown';
-        const senderHttpPort = msg.args[0] || 0;
-        
-        if (senderIp !== 'unknown') {
-            window.api.sendOsc(senderIp, '/sceneplus/sys/pong', []);
-        }
-
-        if (!receivedConnections.has(senderIp)) {
-            uiLog(`[RX] ◀ NEW LINK ESTABLISHED: ${senderIp}:${senderHttpPort}`, 'import');
-            receivedConnections.set(senderIp, { port: senderHttpPort, lastSeen: Date.now() });
-            syncAssetsWithUplink(senderIp, senderHttpPort);
-            refreshConnectedDevicesUI();
-        } else {
-            const conn = receivedConnections.get(senderIp);
-            if (conn) conn.lastSeen = Date.now();
-        }
-        return;
-    }
-
-    if (msg.address === '/sceneplus/sys/panic') {
+        if (offIndicator) offIndicator.classList.remove('hidden');
+        uiLog('Engine OFF', 'error');
         effectManager.panic();
-        uiLog(`[RX] ◀ PANIC RECEIVED`, 'error');
-        return;
     }
 
-    const [effectId, keyCode] = msg.args;
-    const name = effectManager.effectNames?.[effectId] || (effectId ? effectId.split('-')[0] : 'Unknown');
-
-    if (msg.address === '/sceneplus/remote/down') {
-        effectManager.triggerRemoteDown(effectId, keyCode);
-        uiLog(`[RX] ◀ [${name}]`, 'fire');
-    } else if (msg.address === '/sceneplus/remote/up') {
-        effectManager.triggerRemoteUp(effectId, keyCode);
-    }
-});
-
-async function syncAssetsWithUplink(ip: string, port: number) {
-    const syncMode = persistence.state.syncMode || 'streaming';
-    
-    activeSyncCount++;
-    updateSyncIndicator();
-
-    uiLog(`[SYNC] Fetching asset manifest from uplink...`, 'default');
-    try {
-        const response = await fetch(`http://${ip}:${port}/api/effects`);
-        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-        const remoteAssets = await response.json();
-        
-        let dlHashes = [];
-        let streamedCount = 0;
-        let blockedCount = 0;
-
-        for (const remote of remoteAssets) {
-            const hash = remote.effectId;
-            const meta = remote.meta;
-
-            if (!effectManager.players[hash]) {
-                if (syncMode === 'streaming') {
-                    if (meta.usesSDK) {
-                        uiLog(`[OSC-RX] ⚠ Blocked: SDK Effects require Mode A/B (${meta.name})`, 'error');
-                        blockedCount++;
-                    } else {
-                        const streamingBasePath = `http://${ip}:${port}/stream/${hash}/`;
-                        effectManager.registerEffect(hash, meta, streamingBasePath);
-                        
-                        effectManager.effectNames = effectManager.effectNames || {};
-                        effectManager.effectNames[hash] = meta.name || hash;
-                        
-                        effectLibrary.addCard(hash, meta);
-                        streamedCount++;
-                    }
-                } else {
-                    dlHashes.push(hash);
-                }
-            }
-        }
-        
-        if (syncMode === 'streaming') {
-            uiLog(`[SYNC] Streaming Active: Mounted ${streamedCount} assets remotely.`, 'import');
-            window.api.sendOsc(ip, '/sceneplus/sys/sync-progress', [100]);
-            return;
-        }
-
-        if (dlHashes.length === 0) {
-            uiLog(`[SYNC] Local library is up to date.`, 'import');
-            return;
-        }
-        
-        uiLog(`[SYNC] Downloading ${dlHashes.length} missing asset(s)...`, 'import');
-        
-        for (let i = 0; i < dlHashes.length; i++) {
-            const hash = dlHashes[i];
-            const dlUrl = `http://${ip}:${port}/api/download/${hash}`;
-            
-            uiLog(`[SYNC] (${i+1}/${dlHashes.length}) DL: ${hash.substring(0,8)}...`, 'default');
-            
-            const tempFile = await window.api.downloadAsset(dlUrl, hash);
-            if (tempFile) {
-                const isGuest = (syncMode === 'guest');
-                
-                const result = await window.api.importEffectBackground(tempFile, isGuest);
-                if (result.success && result.meta && result.basePath && result.hash) {
-                    effectManager.registerEffect(result.hash, result.meta, result.basePath);
-                    
-                    effectManager.effectNames = effectManager.effectNames || {};
-                    effectManager.effectNames[result.hash] = result.meta.name || result.hash;
-                    
-                    effectLibrary.addCard(result.hash, result.meta);
-                    uiLog(`[SYNC] Installed: ${result.meta.name}`, 'default');
-                } else {
-                    uiLog(`[SYNC] Install Failed: ${result.error}`, 'error');
-                }
-            }
-        }
-        
-        uiLog(`[SYNC] Synchronization complete.`, 'import');
-    } catch (err: any) {
-        uiLog(`[SYNC] Sync failed: ${err.message}`, 'error');
-    } finally {
-        activeSyncCount--;
-        updateSyncIndicator();
-    }
-}
-
-async function importEffect(filePath: string, fileName: string) {
-    if (isImporting) return;
-    
-    isImporting = true;
-    importOverlay.classList.remove('hidden');
-    importBar.style.width = '0%';
-    importPercentText.textContent = '0%';
-    importStatusText.textContent = 'PREPARING STREAM...';
-
-    const result = await window.api.importEffectBackground(filePath);
-    
-    isImporting = false;
-    importOverlay.classList.add('hidden');
-
-    if (result.success && result.hash && result.meta && result.basePath) {
-        if (effectLibrary.allEffects.some(e => e.effectId === result.hash)) {
-             uiLog(`Duplicate effect skipped: ${fileName}`, 'default');
-             return;
-        }
-
-        const displayName = result.meta.name || fileName.replace(/\.(scenefx|zip)$/, '');
-        effectManager.registerEffect(result.hash, result.meta, result.basePath);
-        effectManager.effectNames = effectManager.effectNames || {};
-        effectManager.effectNames[result.hash] = displayName;
-        effectLibrary.addCard(result.hash, result.meta);
-        uiLog(`✔ Imported [${displayName}]  ${result.meta.mediatype}/${result.meta.playmode}`, 'import');
+    if (settingsOpen) {
+        if (settingsPanel) settingsPanel.classList.remove('hidden');
     } else {
-        uiLog(`✘ Import failed: ${fileName}`, 'error');
-        if (result.diagnostic) {
-            showDiagnostic(result.error || 'Unknown Error', result.template || '');
-        } else {
-            await window.api.alertDialog({ 
-                message: 'Failed to load effect', 
-                detail: result.error || 'Unknown Error' 
-            });
-        }
-    }
-}
-
-function showDiagnostic(error: string, template: string) {
-    diagErrorMsg.textContent = error;
-    diagTemplateArea.value = template;
-    diagModal.classList.remove('hidden');
-}
-
-btnCloseDiag.addEventListener('click', () => {
-    diagModal.classList.add('hidden');
-});
-
-btnCopyDiag.addEventListener('click', () => {
-    diagTemplateArea.select();
-    document.execCommand('copy');
-    uiLog('Diagnostic template copied to clipboard.', 'default');
-    btnCopyDiag.textContent = 'COPIED!';
-    setTimeout(() => {
-        btnCopyDiag.textContent = 'COPY TO CLIPBOARD';
-    }, 2000);
-});
-
-effectLibrary.container.addEventListener('effect-deleted', (e: any) => {
-    const { effectId } = e.detail;
-    for (const keyCode in effectManager.keyBindings) {
-        effectManager.keyBindings[keyCode] = effectManager.keyBindings[keyCode].filter((id: string) => id !== effectId);
-        virtualKeyboard.updateBadge(parseInt(keyCode, 10));
-    }
-    if (persistence.state && persistence.state.presets) {
-        for (const p in persistence.state.presets) {
-            for (const k in persistence.state.presets[p]) {
-                persistence.state.presets[p][k] = persistence.state.presets[p][k].filter((id: string) => id !== effectId);
-            }
-        }
-    }
-    persistence.save();
-    uiLog(`Effect deleted permanently.`, 'error');
-});
-
-libraryGrid.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-});
-
-libraryGrid.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    libraryGrid.classList.remove('drag-over');
-    if (e.dataTransfer && !e.dataTransfer.types.includes('Files')) return;
-
-    if (e.dataTransfer) {
-        for (const f of e.dataTransfer.files) {
-            if (f.name.endsWith('.scenefx') || f.name.endsWith('.zip')) {
-                const filePath = window.api.getPathForFile(f);
-                await importEffect(filePath, f.name);
-            }
-        }
+        if (settingsPanel) settingsPanel.classList.add('hidden');
+        if (configModal) configModal.close();
+        if (virtualKeyboard) virtualKeyboard.dismissPopup();
+        if (uiManager) uiManager.hideDiagModal();
+        docsViewer.hide();
     }
 });
 
-btnAddEffect.addEventListener('click', async () => {
-    const result = await window.api.openFileDialog();
-    if (result.canceled || !result.files || result.files.length === 0) return;
 
-    for (const filePath of result.files) {
-        const fileName = filePath.split(/[\\/]/).pop() || 'unknown';
-        await importEffect(filePath, fileName);
-    }
+
+// Init
+persistence.loadState().then(() => {
+    uiManager.refreshPresetNamesUI(persistence.state.presetNames);
 });
-
-const btnClearKeys = document.getElementById('btn-clear-keys');
-if (btnClearKeys) {
-    btnClearKeys.addEventListener('click', async () => {
-        const ok = await window.api.confirmDialog({
-            message: 'All key assignments will be cleared. Continue?',
-            detail: 'This will reset the current preset bindings.'
-        });
-        if (ok) {
-            virtualKeyboard.clearAll();
-            persistence.save();
-            uiLog('All key assignments cleared.', 'default');
-        }
-    });
-}
-
-const btnExitApp = document.getElementById('btn-exit-app');
-if (btnExitApp) {
-    btnExitApp.addEventListener('click', async () => {
-        const ok = await window.api.confirmDialog({
-            message: 'Exit ScenePlus+?',
-            detail: 'Make sure your work is saved.'
-        });
-        if (ok) {
-            window.close();
-        }
-    });
-}

@@ -49,6 +49,7 @@ export interface AlertDialogOptions {
 export interface SettingsConfig {
     maxEffects?: number;
     syncMode?: string;
+    blockAssignedKeys?: boolean;
     presetNames?: Record<number, string>;
     [key: string]: any;
 }

@@ -34,24 +34,41 @@ export class EffectService {
         if (existing.length > 0) return;
 
         console.log('[WELCOME] First run detected. Installing official samples...');
-        const samples = ['mouse_particle.scenefx', 'cyber_invert.scenefx', 'gravity_distortion.scenefx'];
+        const samples = ['Absolute_Cyber_Sync', 'Desktop_Virus_Joke', 'Fake_BSoD'];
 
         samples.forEach(s => {
-            const src = path.join(this.assetsDir, s);
-            if (fs.existsSync(src)) {
+            const srcZip = path.join(this.assetsDir, 'effects-source', `${s}.scenefx`);
+            const srcDir = path.join(this.assetsDir, 'effects-source', s);
+
+            if (fs.existsSync(srcZip)) {
                 try {
-                    const buffer = fs.readFileSync(src);
+                    const buffer = fs.readFileSync(srcZip);
                     const hash = crypto.createHash('sha256').update(buffer).digest('hex');
                     
                     const dest = path.join(effectsDir, hash);
                     if (!fs.existsSync(dest)) {
                         fs.mkdirSync(dest, { recursive: true });
-                        const zip = new AdmZip(src);
+                        const zip = new AdmZip(srcZip);
                         zip.extractAllTo(dest, true);
                         console.log(`[WELCOME] Successfully installed: ${s} (ID: ${hash.substring(0,8)})`);
                     }
                 } catch (err) {
                     console.error(`[WELCOME] Failed to import ${s}:`, err);
+                }
+            } else if (fs.existsSync(srcDir) && fs.statSync(srcDir).isDirectory()) {
+                try {
+                    const metaPath = path.join(srcDir, 'meta.json');
+                    const hashSource = fs.existsSync(metaPath) ? fs.readFileSync(metaPath, 'utf8') : s;
+                    const hash = crypto.createHash('sha256').update(hashSource).digest('hex');
+                    
+                    const dest = path.join(effectsDir, hash);
+                    if (!fs.existsSync(dest)) {
+                        fs.mkdirSync(dest, { recursive: true });
+                        fs.cpSync(srcDir, dest, { recursive: true });
+                        console.log(`[WELCOME] Successfully installed folder sample: ${s} (ID: ${hash.substring(0,8)})`);
+                    }
+                } catch (err) {
+                    console.error(`[WELCOME] Failed to import folder sample ${s}:`, err);
                 }
             }
         });
@@ -62,7 +79,7 @@ export class EffectService {
             const urlPath = request.url.substring(8);
 
             if (urlPath.startsWith('_core/')) {
-                const corePath = path.join(this.assetsDir, urlPath.substring(6));
+                const corePath = path.join(this.assetsDir, 'system', urlPath.substring(6));
                 return callback({ path: path.normalize(corePath) });
             }
 

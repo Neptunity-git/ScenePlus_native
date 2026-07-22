@@ -138,35 +138,36 @@ body {
 .cyber-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   justify-content: center;
-  flex: 0 0 140px;
+  flex: 0 0 130px;
 }
 
 .cyber-sidebar.left {
   align-items: flex-end;
-  padding-right: 10px;
+  padding-right: 8px;
   border-right: 1px dashed rgba(20, 250, 200, 0.2);
 }
 
 .cyber-sidebar.right {
   align-items: flex-start;
-  padding-left: 10px;
+  padding-left: 8px;
   border-left: 1px dashed rgba(20, 250, 200, 0.2);
 }
 
 /* Sidebar buttons: uniform size */
 .cyber-sidebar .cyber-btn {
-  width: 130px;
+  width: 120px;
   text-align: center;
-  padding: 10px 0;
+  padding: 8px 0;
+  font-size: 0.75rem;
 }
 
 .cyber-btn {
   background: transparent;
   color: var(--neon-cyan);
   border: 1px solid var(--neon-cyan);
-  padding: 8px 16px;
+  padding: 8px 14px;
   font-family: var(--font-cyber);
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -194,6 +195,8 @@ body {
   color: var(--neon-green);
   border-color: var(--neon-green);
   box-shadow: 0 0 5px rgba(57, 255, 20, 0.2);
+  padding: 6px 12px;
+  font-size: 0.75rem;
 }
 
 .cyber-btn.preset:hover {
@@ -210,7 +213,6 @@ body {
 /* Mode Buttons - Cyan Neon (already default, but ensure tab behavior is cyan) */
 .cyber-btn.tab {
   color: #0ff;
-  /* Use pure cyan for modes to contrast with the green-tinted #14fac8 if desired, or keep default */
   border-color: #0ff;
   box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
 }
@@ -251,14 +253,11 @@ body {
 .cyber-keyboard-wrapper {
   flex: 1;
   min-height: 0;
-  /* Critical: allows flex children to shrink and scroll */
   display: flex;
   justify-content: center;
   align-items: stretch;
-  padding: 15px 25px;
-  /* Reduced side padding to gain space for panels */
-  gap: 10px;
-  /* Space between all children: panels, sidebars, keyboard */
+  padding: 10px 15px;
+  gap: 8px;
 }
 
 #keyboard-grid {
@@ -271,9 +270,10 @@ body {
 
 /* Side panels (mode info & console log) */
 .cyber-panel {
-  flex: 0 0 190px;
+  flex: 1 1 180px;
+  min-width: 130px;
+  max-width: 190px;
   min-height: 0;
-  /* Critical: allows overflow-y to activate */
   display: flex;
   flex-direction: column;
   background: rgba(0, 0, 0, 0.5);
@@ -599,6 +599,20 @@ body {
   flex: 1;
 }
 
+.card-title-input {
+  background: rgba(0, 20, 25, 0.9);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  font-family: var(--font-cyber);
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 2px;
+  width: 90%;
+  outline: none;
+  box-shadow: 0 0 8px rgba(20, 250, 200, 0.4);
+}
+
 .card-actions {
   display: flex;
   gap: 10px;
@@ -619,24 +633,24 @@ body {
   text-transform: uppercase;
 }
 
-.card-play-btn {
+.card-rename-btn {
   background: transparent;
-  color: var(--neon-green);
-  border: 1px solid var(--neon-green);
-  width: 34px;
-  height: 34px;
+  color: var(--neon-cyan);
+  border: 1px solid rgba(20, 250, 200, 0.5);
+  width: 35px;
+  height: 35px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   border-radius: 3px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   transition: all 0.2s;
 }
 
-.card-play-btn:hover {
-  background: rgba(57, 255, 20, 0.2);
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+.card-rename-btn:hover {
+  background: rgba(20, 250, 200, 0.2);
+  box-shadow: 0 0 10px rgba(20, 250, 200, 0.5);
 }
 
 .card-delete-btn {
@@ -880,4 +894,14 @@ body {
 #diag-template-area:focus {
   border-color: var(--neon-green);
   box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+}
+
+#global-effects-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: -1; /* Behind UI */
 }

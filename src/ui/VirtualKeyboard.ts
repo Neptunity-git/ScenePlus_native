@@ -1,4 +1,5 @@
 import { EffectManager } from '../engine/EffectManager';
+import { ParamEditor } from './ParamEditor';
 
 const KEY_ROWS = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
@@ -17,6 +18,7 @@ export const APP_KEYS_TO_UIOHOOK: Record<string, number> = {
 export class VirtualKeyboard {
     private container: HTMLElement;
     private effectManager: EffectManager;
+    private paramEditor: ParamEditor;
     private keyElements: Record<number, { btn: HTMLElement; badge: HTMLElement }>;
     private _activePopup: HTMLElement | null = null;
     
@@ -27,6 +29,7 @@ export class VirtualKeyboard {
         if (!c) throw new Error(`Container ${containerId} not found`);
         this.container = c;
         this.effectManager = effectManager;
+        this.paramEditor = new ParamEditor(effectManager);
         this.keyElements = {};
 
         this.renderKeyboard();
@@ -133,6 +136,9 @@ export class VirtualKeyboard {
                 row.appendChild(name);
                 row.appendChild(removeBtn);
                 popup.appendChild(row);
+                
+                // Render custom params for this effect
+                this.paramEditor.renderParams(popup, effectId);
             });
         }
 
@@ -178,7 +184,7 @@ export class VirtualKeyboard {
         this.updateBadge(keyCode);
     }
 
-    private clearAllInternal() {
+    public clearAllInternal() {
         Object.keys(this.effectManager.keyBindings).forEach(keyCodeStr => {
             const keyCode = parseInt(keyCodeStr, 10);
             this.effectManager.bindKey(keyCode, []);

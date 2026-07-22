@@ -67,6 +67,10 @@ const MODE_INFO: Record<string, string> = {
     neutral: `<p class="mode-info-hint">NEUTRAL MODE.\nPress keys to trigger assigned effects.</p>`,
     send: `
         <p class="mode-info-hint">TRANSMIT MODE.<br>Find receivers on LAN.</p>
+        <div class="mode-info-section" id="osc-target-status-section">
+            <h4>UPLINK STATUS</h4>
+            <div class="mode-info-item" id="osc-target-status" style="text-align: center; font-family: monospace; color: var(--text-muted);">DISCONNECTED</div>
+        </div>
         <div class="mode-info-section">
             <button id="btn-osc-scan" class="cyber-btn accent" style="width: 100%; display: block; font-size: 0.75rem; padding: 6px;">SCAN NETWORK</button>
             <div id="osc-device-list" style="margin-top: 8px;"></div>

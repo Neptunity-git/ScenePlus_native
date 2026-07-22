@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, protocol } from 'electron';
 import { WindowManager } from './WindowManager';
 import { InputManager } from './InputManager';
 import { NetworkService } from './services/NetworkService';
@@ -18,6 +18,11 @@ if (!gotSingleInstanceLock) {
     app.quit();
     process.exit(0);
 }
+
+// Register scene:// as privileged so it can be used for dynamic import()
+protocol.registerSchemesAsPrivileged([
+    { scheme: 'scene', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
+]);
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);

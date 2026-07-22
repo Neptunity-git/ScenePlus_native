@@ -23,8 +23,9 @@ export class WindowManager {
             frame: false,
             alwaysOnTop: true,
             skipTaskbar: true,
+            resizable: false,
             hasShadow: false,
-            icon: path.join(app.getAppPath(), 'assets/logo_ScenePlus+.ico'),
+            icon: path.join(app.getAppPath(), 'assets/system/logo_ScenePlus+.ico'),
             webPreferences: {
                 preload: path.join(app.getAppPath(), 'out/preload.js'),
                 contextIsolation: true,
@@ -33,6 +34,8 @@ export class WindowManager {
         });
 
         this.mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+        this.mainWindow.setSkipTaskbar(true);
+        this.mainWindow.setResizable(false);
         // Point to the source HTML (note: at runtime, this might need adjustment if paths change)
         this.mainWindow.loadFile(path.join(app.getAppPath(), 'out/index.html'));
         this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -45,6 +48,7 @@ export class WindowManager {
     public updateRendererState(): void {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send('state-changed', this.state);
+            this.mainWindow.setSkipTaskbar(true);
 
             if (this.state.settingsOpen) {
                 this.mainWindow.setIgnoreMouseEvents(false);
@@ -62,7 +66,7 @@ export class WindowManager {
         return this.mainWindow !== null && !this.mainWindow.isDestroyed();
     }
 
-    public setState(newState: AppState): void {
+    public setState(newState: Partial<AppState>): void {
         this.state = { ...this.state, ...newState };
         this.updateRendererState();
     }
