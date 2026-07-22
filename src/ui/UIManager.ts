@@ -1,5 +1,5 @@
 import { uiLog } from './UILogger';
-import { IEffectManager, IPersistenceManager, IUIManager } from '../shared/interfaces';
+import { IEffectManager, IPersistenceManager, IUIManager, INetworkController } from '../shared/interfaces';
 import { EffectLibrary } from './EffectLibrary';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { ConfigModal } from './ConfigModal';
@@ -10,6 +10,7 @@ export class UIManager implements IUIManager {
     private persistence: IPersistenceManager;
     private virtualKeyboard: VirtualKeyboard;
     private configModal: ConfigModal;
+    private networkController: INetworkController;
 
     private importOverlay = document.getElementById('import-overlay') as HTMLElement;
     private importBar = document.getElementById('import-progress-bar') as HTMLElement;
@@ -27,13 +28,15 @@ export class UIManager implements IUIManager {
         effectLibrary: EffectLibrary,
         persistence: IPersistenceManager,
         virtualKeyboard: VirtualKeyboard,
-        configModal: ConfigModal
+        configModal: ConfigModal,
+        networkController: INetworkController
     ) {
         this.effectManager = effectManager;
         this.effectLibrary = effectLibrary;
         this.persistence = persistence;
         this.virtualKeyboard = virtualKeyboard;
         this.configModal = configModal;
+        this.networkController = networkController;
 
         this.setupEventListeners();
     }
@@ -42,7 +45,7 @@ export class UIManager implements IUIManager {
         const configBtn = document.querySelector('.cyber-btn.icon[title="Details / Settings"]');
         if (configBtn) {
             configBtn.addEventListener('click', () => {
-                this.configModal.open('neutral'); // the actual mode is handled elsewhere, default to neutral for UI purposes
+                this.configModal.open(this.networkController.currentMode); // lock sync mode if not neutral
             });
         }
 
@@ -242,55 +245,78 @@ export class UIManager implements IUIManager {
 
         devices.forEach(ip => {
             const card = document.createElement('div');
-            card.style.background = 'rgba(0, 20, 25, 0.6)';
-            card.style.border = '1px solid rgba(20, 250, 200, 0.35)';
+            card.style.background = 'rgba(0, 25, 30, 0.6)';
+            card.style.border = '1px solid rgba(20, 250, 200, 0.4)';
             card.style.borderRadius = '4px';
-            card.style.padding = '6px 8px';
+            card.style.padding = '8px 10px';
             card.style.marginBottom = '6px';
             card.style.display = 'flex';
             card.style.alignItems = 'center';
             card.style.justifyContent = 'space-between';
-            card.style.gap = '6px';
+            card.style.cursor = 'pointer';
+            card.style.transition = 'all 0.2s ease';
             card.style.boxShadow = 'inset 0 0 8px rgba(20, 250, 200, 0.1)';
 
-            const ipContainer = document.createElement('div');
-            ipContainer.style.display = 'flex';
-            ipContainer.style.flexDirection = 'column';
-            ipContainer.style.overflow = 'hidden';
+            card.onmouseenter = () => {
+                card.style.background = 'rgba(20, 250, 200, 0.15)';
+                card.style.borderColor = 'var(--neon-cyan)';
+                card.style.boxShadow = '0 0 10px rgba(20, 250, 200, 0.3), inset 0 0 10px rgba(20, 250, 200, 0.2)';
+            };
+            card.onmouseleave = () => {
+                card.style.background = 'rgba(0, 25, 30, 0.6)';
+                card.style.borderColor = 'rgba(20, 250, 200, 0.4)';
+                card.style.boxShadow = 'inset 0 0 8px rgba(20, 250, 200, 0.1)';
+            };
+
+            card.onclick = () => onConnectClick(ip);
 
             const ipLabel = document.createElement('span');
             ipLabel.style.fontFamily = 'monospace';
-            ipLabel.style.fontSize = '0.85rem';
+            ipLabel.style.fontSize = '0.95rem';
             ipLabel.style.fontWeight = 'bold';
             ipLabel.style.color = 'var(--neon-cyan)';
-            ipLabel.style.textShadow = '0 0 4px rgba(20, 250, 200, 0.4)';
-            ipLabel.style.whiteSpace = 'nowrap';
-            ipLabel.style.overflow = 'hidden';
-            ipLabel.style.textOverflow = 'ellipsis';
+            ipLabel.style.textShadow = '0 0 5px rgba(20, 250, 200, 0.5)';
+            ipLabel.style.letterSpacing = '0.5px';
             ipLabel.textContent = ip;
 
-            const subLabel = document.createElement('span');
-            subLabel.style.fontSize = '0.58rem';
-            subLabel.style.color = 'var(--text-muted)';
-            subLabel.style.marginTop = '1px';
-            subLabel.textContent = 'RECEIVER NODE';
+            const actionBadge = document.createElement('span');
+            actionBadge.style.fontSize = '0.65rem';
+            actionBadge.style.color = 'var(--neon-cyan)';
+            actionBadge.style.opacity = '0.8';
+            actionBadge.style.letterSpacing = '0.5px';
+            actionBadge.style.fontFamily = 'var(--font-cyber)';
+            actionBadge.textContent = '⚡ CONNECT';
 
-            ipContainer.appendChild(ipLabel);
-            ipContainer.appendChild(subLabel);
-
-            const connectBtn = document.createElement('button');
-            connectBtn.className = 'cyber-btn accent';
-            connectBtn.style.fontSize = '0.65rem';
-            connectBtn.style.padding = '4px 8px';
-            connectBtn.style.whiteSpace = 'nowrap';
-            connectBtn.style.flexShrink = '0';
-            connectBtn.style.lineHeight = '1';
-            connectBtn.textContent = 'CONNECT';
-            connectBtn.onclick = () => onConnectClick(ip);
-
-            card.appendChild(ipContainer);
-            card.appendChild(connectBtn);
+            card.appendChild(ipLabel);
+            card.appendChild(actionBadge);
             listEl.appendChild(card);
         });
+    }
+
+    public renderConnectedDevices(connections: Map<string, {port: number, lastSeen: number}>) {
+        const devs = document.getElementById('osc-connected-devices');
+        if (!devs) return;
+        
+        if (!connections || connections.size === 0) {
+            devs.textContent = '(NONE)';
+            devs.style.color = 'var(--text-muted)';
+            devs.style.textShadow = 'none';
+        } else {
+            const ips = Array.from(connections.keys());
+            devs.innerHTML = `<div style="color: var(--neon-cyan); font-weight: bold; text-shadow: 0 0 5px var(--neon-cyan);">${ips.join(', ')}</div><div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 3px;">${connections.size} DEVICE(S) LINKED</div>`;
+        }
+    }
+
+    public renderActiveTargetStatus(targetIp: string) {
+        const statusEl = document.getElementById('osc-target-status');
+        if (!statusEl) return;
+        
+        if (!targetIp) {
+            statusEl.textContent = 'DISCONNECTED';
+            statusEl.style.color = 'var(--text-muted)';
+            statusEl.style.textShadow = 'none';
+        } else {
+            statusEl.innerHTML = `<span style="color: #00ff88; text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);">UPLINK ACTIVE ➔ ${targetIp}</span>`;
+        }
     }
 }

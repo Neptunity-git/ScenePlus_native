@@ -108,9 +108,16 @@ export class Player {
         } else if (type === 'code') {
             if (this.modulePromise) {
                 this.modulePromise.then(mod => {
-                    if (mod && mod.init && instance.active) {
+                    if (mod && mod.init) {
                         instance.module = mod;
                         instance.state = mod.init(env);
+                        
+                        if (!instance.active) {
+                            if (mode === 'hold' && mod.release) {
+                                mod.release(instance.state);
+                            }
+                            setTimeout(() => this.hardStopInstance(instance), 50);
+                        }
                     }
                 });
             }

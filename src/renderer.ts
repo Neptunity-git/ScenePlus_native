@@ -11,7 +11,8 @@ import { SyncManager } from './network/SyncManager';
 import { UIManager } from './ui/UIManager';
 import { RendererIPC } from './ipc/RendererIPC';
 
-// Setup OS UI Scaling (Fit both width and height)
+// Setup OS UI Scaling (Fit both width and height without micro-fluctuations)
+let currentZoom = 0;
 function initZoom() {
     const baseWidth = 1280;
     const baseHeight = 720;
@@ -19,8 +20,13 @@ function initZoom() {
     const currentHeight = window.innerHeight || window.screen.height;
     
     // Scale proportionally to fit within both dimensions
-    const zoomFactor = Math.min(currentWidth / baseWidth, currentHeight / baseHeight);
-    window.api.setZoomFactor(zoomFactor);
+    const newZoom = Math.min(currentWidth / baseWidth, currentHeight / baseHeight);
+    
+    // Threshold check (2%) to prevent subpixel rounding & resize feedback loops
+    if (Math.abs(newZoom - currentZoom) > 0.02) {
+        currentZoom = newZoom;
+        window.api.setZoomFactor(newZoom);
+    }
 }
 initZoom();
 window.addEventListener('resize', initZoom);
@@ -63,11 +69,11 @@ window.api.onEffectComposed((data: any) => {
 });
 
 // Sub Controllers
-const uiManager = new UIManager(effectManager, effectLibrary, persistence, virtualKeyboard, configModal);
 const syncManager = new SyncManager(effectManager, effectLibrary, persistence);
 const networkController = new NetworkController((ip, port) => {
     syncManager.syncAssetsWithUplink(ip, port);
 });
+const uiManager = new UIManager(effectManager, effectLibrary, persistence, virtualKeyboard, configModal, networkController);
 
 // IPC Router
 const ipc = new RendererIPC(effectManager, networkController, syncManager, uiManager, persistence);
@@ -134,6 +140,16 @@ networkController.onDiscoveredDevicesChanged = (devices: string[]) => {
             // on Timeout
         });
     });
+};
+
+// Render connected devices in RECEIVE mode
+networkController.onReceivedConnectionsChanged = (connections) => {
+    uiManager.renderConnectedDevices(connections);
+};
+
+// Render active target status in TRANSMIT mode
+networkController.onActiveTargetChanged = (targetIp: string) => {
+    uiManager.renderActiveTargetStatus(targetIp);
 };
 
 // Global Window State

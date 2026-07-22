@@ -9,6 +9,8 @@ export class NetworkController {
     private pingTimeoutId: any = null;
     public discoveredDevices: string[] = [];
     public onDiscoveredDevicesChanged?: (devices: string[]) => void;
+    public onReceivedConnectionsChanged?: (connections: Map<string, {port: number, lastSeen: number}>) => void;
+    public onActiveTargetChanged?: (targetIp: string) => void;
     public receivedConnections = new Map<string, {port: number, lastSeen: number}>();
     private localIps: string[] = [];
     
@@ -37,6 +39,10 @@ export class NetworkController {
         this.pingTimeoutId = null;
         await this.refreshLocalIps();
 
+        if (this.onActiveTargetChanged) {
+            this.onActiveTargetChanged('');
+        }
+
         if (mode === 'neutral') {
             await window.api.stopOscServer();
             await window.api.stopHttpServer();
@@ -60,6 +66,9 @@ export class NetworkController {
 
         if (mode === 'receive') {
             this.receivedConnections.clear();
+            if (this.onReceivedConnectionsChanged) {
+                this.onReceivedConnectionsChanged(this.receivedConnections);
+            }
             uiLog('RECEIVE MODE: Listening on port 8000', 'import');
         } else if (mode === 'send') {
             uiLog('TRANSMIT: Scan or enter IP manually', 'default');
@@ -87,6 +96,9 @@ export class NetworkController {
             this.pendingTargetIp = '';
             
             uiLog(`UPLINK SECURED: Connected to ${this.activeTargetIp}`, 'fire');
+            if (this.onActiveTargetChanged) {
+                this.onActiveTargetChanged(this.activeTargetIp);
+            }
             onConnected();
         }
     }
@@ -101,6 +113,10 @@ export class NetworkController {
         } else {
             const conn = this.receivedConnections.get(senderIp);
             if (conn) conn.lastSeen = Date.now();
+        }
+
+        if (this.onReceivedConnectionsChanged) {
+            this.onReceivedConnectionsChanged(this.receivedConnections);
         }
     }
 

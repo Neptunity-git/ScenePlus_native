@@ -24,7 +24,10 @@ export interface INetworkController {
     activeTargetIp: string;
     activeHttpPort: number;
     discoveredDevices: string[];
+    receivedConnections: Map<string, {port: number, lastSeen: number}>;
     onDiscoveredDevicesChanged?: (devices: string[]) => void;
+    onReceivedConnectionsChanged?: (connections: Map<string, {port: number, lastSeen: number}>) => void;
+    onActiveTargetChanged?: (targetIp: string) => void;
 
     setMode(mode: string): Promise<void>;
     attemptConnection(ip: string, onTimeout: () => void): void;
@@ -43,6 +46,8 @@ export interface IUIManager {
     refreshPresetNamesUI(names: Record<string | number, string>): void;
     hideDiagModal(): void;
     renderDiscoveredDevicesList(devices: string[], onConnectClick: (ip: string) => void): void;
+    renderConnectedDevices(connections: Map<string, {port: number, lastSeen: number}>): void;
+    renderActiveTargetStatus(targetIp: string): void;
 }
 
 export interface IPersistenceManager {

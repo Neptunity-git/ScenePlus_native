@@ -51,19 +51,14 @@ export class SyncManager {
 
                 if (!this.effectManager.players[hash]) {
                     if (syncMode === 'streaming') {
-                        if (meta.usesSDK) {
-                            uiLog(`[OSC-RX] ⚠ Blocked: SDK Effects require Mode A/B (${meta.name})`, 'error');
-                            blockedCount++;
-                        } else {
-                            const streamingBasePath = `http://${ip}:${port}/stream/${hash}/`;
-                            this.effectManager.registerEffect(hash, meta, streamingBasePath);
-                            
-                            this.effectManager.effectNames = this.effectManager.effectNames || {};
-                            this.effectManager.effectNames[hash] = meta.name || hash;
-                            
-                            this.effectLibrary.addCard(hash, meta);
-                            streamedCount++;
-                        }
+                        const streamingBasePath = `http://${ip}:${port}/stream/${hash}/`;
+                        this.effectManager.registerEffect(hash, meta, streamingBasePath);
+                        
+                        this.effectManager.effectNames = this.effectManager.effectNames || {};
+                        this.effectManager.effectNames[hash] = meta.name || hash;
+                        
+                        this.effectLibrary.addCard(hash, meta);
+                        streamedCount++;
                     } else {
                         dlHashes.push(hash);
                     }

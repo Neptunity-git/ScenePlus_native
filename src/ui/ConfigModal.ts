@@ -5,13 +5,12 @@ export class ConfigModal {
     private modal: HTMLElement;
     private btnClose: HTMLElement;
     private btnSave: HTMLElement;
-    
+
     private inputMaxN: HTMLInputElement;
     private chkBlockAssignedKeys: HTMLInputElement;
     private selectKeyEngine: HTMLSelectElement;
     private selectKeySettings: HTMLSelectElement;
     private selectSyncMode: HTMLSelectElement;
-    private syncWarning: HTMLElement;
     private presetNameGrid: HTMLElement;
 
     private fKeys: { name: string; code: number }[];
@@ -23,13 +22,12 @@ export class ConfigModal {
         this.modal = document.getElementById('config-modal') as HTMLElement;
         this.btnClose = document.getElementById('btn-close-config') as HTMLElement;
         this.btnSave = document.getElementById('btn-save-config') as HTMLElement;
-        
+
         this.inputMaxN = document.getElementById('config-max-n') as HTMLInputElement;
         this.chkBlockAssignedKeys = document.getElementById('config-block-assigned-keys') as HTMLInputElement;
         this.selectKeyEngine = document.getElementById('config-key-engine') as HTMLSelectElement;
         this.selectKeySettings = document.getElementById('config-key-settings') as HTMLSelectElement;
         this.selectSyncMode = document.getElementById('config-sync-mode') as HTMLSelectElement;
-        this.syncWarning = document.getElementById('config-sync-warning') as HTMLElement;
         this.presetNameGrid = document.getElementById('preset-name-grid') as HTMLElement;
 
         this.fKeys = [
@@ -66,30 +64,15 @@ export class ConfigModal {
 
     private bindEvents() {
         this.btnClose.addEventListener('click', () => this.close());
-        
+
         this.btnSave.addEventListener('click', () => {
             this.saveAndApply();
         });
-
-        if (this.selectSyncMode) {
-            this.selectSyncMode.addEventListener('change', () => {
-                this.updateSyncWarning();
-            });
-        }
-    }
-
-    private updateSyncWarning() {
-        if (!this.selectSyncMode || !this.syncWarning) return;
-        if (this.selectSyncMode.value === 'streaming') {
-            this.syncWarning.style.display = 'block';
-        } else {
-            this.syncWarning.style.display = 'none';
-        }
     }
 
     public open(networkMode = 'neutral') {
         const state = this.persistence.state;
-        
+
         this.inputMaxN.value = (state.maxN || 5).toString();
         if (this.chkBlockAssignedKeys) {
             this.chkBlockAssignedKeys.checked = !!state.blockAssignedKeys;
@@ -98,7 +81,7 @@ export class ConfigModal {
         this.selectKeySettings.value = (state.settingsKey || 67).toString();
         if (this.selectSyncMode) {
             this.selectSyncMode.value = state.syncMode || 'streaming';
-            
+
             if (networkMode !== 'neutral') {
                 this.selectSyncMode.disabled = true;
                 this.selectSyncMode.title = "Cannot change sync mode while network is active";
@@ -107,8 +90,6 @@ export class ConfigModal {
                 this.selectSyncMode.title = "";
             }
         }
-
-        this.updateSyncWarning();
 
         const inputs = this.presetNameGrid.querySelectorAll('input');
         inputs.forEach(input => {
@@ -126,7 +107,7 @@ export class ConfigModal {
     private async saveAndApply() {
         const engineKey = parseInt(this.selectKeyEngine.value, 10);
         const settingsKey = parseInt(this.selectKeySettings.value, 10);
-        
+
         if (engineKey === settingsKey) {
             await window.api.alertDialog({
                 message: 'Configuration Error',
