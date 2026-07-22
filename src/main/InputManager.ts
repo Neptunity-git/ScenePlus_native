@@ -12,13 +12,21 @@ export class InputManager {
         this.windowManager = windowManager;
     }
 
-    /** Convert screen-level cursor position to window-local coordinates */
+    /** Convert screen-level cursor position to window-local CSS coordinates */
     private getLocalMousePos(): { x: number; y: number } {
         const pos = screen.getCursorScreenPoint();
         const win = this.windowManager.getWindow();
         if (win && !win.isDestroyed()) {
             const bounds = win.getBounds();
-            return { x: pos.x - bounds.x, y: pos.y - bounds.y };
+            const localX = pos.x - bounds.x;
+            const localY = pos.y - bounds.y;
+            // Convert logical window coords to CSS-zoomed coords used by the renderer.
+            // webContents.getZoomFactor() returns the current page zoom set by initZoom().
+            const zoomFactor = win.webContents.getZoomFactor();
+            return {
+                x: localX / zoomFactor,
+                y: localY / zoomFactor
+            };
         }
         return pos;
     }
