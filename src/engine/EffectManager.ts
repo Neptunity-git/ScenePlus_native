@@ -48,6 +48,17 @@ export class EffectManager {
     
     // Per-effect custom params
     public effectParams: Record<string, Record<string, any>> = {};
+    public onParamChange?: (effectId: string, key: string, value: any) => void;
+
+    public setParam(effectId: string, key: string, value: any, broadcast = true) {
+        if (!this.effectParams[effectId]) {
+            this.effectParams[effectId] = {};
+        }
+        this.effectParams[effectId][key] = value;
+        if (broadcast && this.onParamChange) {
+            this.onParamChange(effectId, key, value);
+        }
+    }
 
     constructor(maxN = 1) {
         this.maxN = maxN;
@@ -100,6 +111,14 @@ export class EffectManager {
             this.players[effectId].destroy();
         }
         this.players[effectId] = new Player(effectId, meta, basePath, this.maxN);
+
+        if (meta.params && Array.isArray(meta.params)) {
+            for (const p of meta.params) {
+                if (!this.effectParams[effectId] || this.effectParams[effectId][p.key] === undefined) {
+                    this.setParam(effectId, p.key, p.default ?? 0, false);
+                }
+            }
+        }
     }
 
     public bindKey(keyCode: string | number, effectIds: string[]) {
@@ -112,10 +131,23 @@ export class EffectManager {
     }
 
     public handleOscTrigger(address: string, args: any[]) {
-        // e.g. /sceneplus/play <effectId>
+        console.log(`[OSC IN] address: ${address}, args:`, args);
         if (address === '/sceneplus/play') {
             const effectId = args[0];
             const code = args[1] || 'OSC';
+            const paramsJson = args[2];
+            console.log(`[OSC PLAY] effectId: ${effectId}, paramsJson:`, paramsJson);
+            if (paramsJson && typeof paramsJson === 'string') {
+                try {
+                    const parsed = JSON.parse(paramsJson);
+                    console.log(`[OSC PLAY] parsed params:`, parsed);
+                    for (const [k, v] of Object.entries(parsed)) {
+                        this.setParam(effectId, k, v, false);
+                    }
+                } catch (e) {
+                    console.error(`[OSC PLAY] JSON parse error:`, e);
+                }
+            }
             this.triggerRemoteDown(effectId, code);
         } else if (address === '/sceneplus/stop') {
             const effectId = args[0];
@@ -131,7 +163,7 @@ export class EffectManager {
             const group = new TriggerGroup(virtualKeyCode);
             const isLoopToggleOff = this.handleLoopToggle(virtualKeyCode, player);
             if (!isLoopToggleOff) {
-                const instance = player.play(this.getEnv());
+                const instance = player.play(this.getEnv(effectId));
                 group.add(player, instance);
             }
             if (group.entries.length > 0) {
@@ -181,7 +213,7 @@ export class EffectManager {
             if (player) {
                 const isLoopToggleOff = this.handleLoopToggle(keyCode, player);
                 if (!isLoopToggleOff) {
-                    const instance = player.play(this.getEnv());
+                    const instance = player.play(this.getEnv(id));
                     group.add(player, instance);
                 }
             }

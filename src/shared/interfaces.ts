@@ -6,8 +6,10 @@ export interface IEffectManager {
     effectNames?: Record<string, string>;
     effectParams: Record<string, Record<string, any>>;
     onTriggerKey?: (type: 'down' | 'up', keyCode: number, effectIds: string[]) => void;
+    onParamChange?: (effectId: string, key: string, value: any) => void;
     maxN?: number;
 
+    setParam(effectId: string, key: string, value: any, broadcast?: boolean): void;
     updateMouse(x: number, y: number): void;
     handleMouseDown(x: number, y: number, button: number): void;
     handleMouseUp(x: number, y: number, button: number): void;

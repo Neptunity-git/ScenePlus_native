@@ -33,9 +33,8 @@ export class ParamEditor {
 
         // Initialize effectParams if not present
         if (!this.effectManager.effectParams[effectId]) {
-            this.effectManager.effectParams[effectId] = {};
             for (const p of paramDefs) {
-                this.effectManager.effectParams[effectId][p.key] = p.default ?? 0;
+                this.effectManager.setParam(effectId, p.key, p.default ?? 0, false);
             }
         }
 
@@ -76,7 +75,7 @@ export class ParamEditor {
 
                 input.addEventListener('input', () => {
                     const val = parseFloat(input.value);
-                    this.effectManager.effectParams[effectId][param.key] = val;
+                    this.effectManager.setParam(effectId, param.key, val);
                     valueDisplay.textContent = val.toFixed(2);
                 });
 
@@ -90,7 +89,7 @@ export class ParamEditor {
                 input.value = currentVal || '#39ff14';
 
                 input.addEventListener('input', () => {
-                    this.effectManager.effectParams[effectId][param.key] = input.value;
+                    this.effectManager.setParam(effectId, param.key, input.value);
                 });
 
                 row.appendChild(input);
@@ -101,7 +100,7 @@ export class ParamEditor {
                 input.checked = !!currentVal;
 
                 input.addEventListener('change', () => {
-                    this.effectManager.effectParams[effectId][param.key] = input.checked;
+                    this.effectManager.setParam(effectId, param.key, input.checked);
                 });
 
                 row.appendChild(input);
@@ -117,7 +116,7 @@ export class ParamEditor {
                 }
 
                 select.addEventListener('change', () => {
-                    this.effectManager.effectParams[effectId][param.key] = select.value;
+                    this.effectManager.setParam(effectId, param.key, select.value);
                 });
 
                 row.appendChild(select);

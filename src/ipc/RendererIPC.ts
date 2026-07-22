@@ -55,6 +55,13 @@ export class RendererIPC {
             const p = args[0];
             uiLog(`[UPLINK] Sync progress: ${p}%`, 'import');
         });
+
+        this.registerOscHandler('/sceneplus/param', (args) => {
+            const effectId = args[0];
+            const key = args[1];
+            const value = args[2];
+            this.effectManager.setParam(effectId, key, value, false);
+        });
     }
 
     public setupBindings() {
@@ -70,12 +77,39 @@ export class RendererIPC {
         window.api.onKeyDown((keyCode: number) => this.effectManager.triggerKey(keyCode, 'down'));
         window.api.onKeyUp((keyCode: number) => this.effectManager.triggerKey(keyCode, 'up'));
 
+        this.effectManager.onParamChange = (effectId: string, key: string, value: any) => {
+            if (this.networkController.currentMode === 'send' && this.networkController.activeTargetIp) {
+                window.api.sendOsc(this.networkController.activeTargetIp, '/sceneplus/param', [effectId, key, value]);
+            }
+        };
+
         // Transmit OSC trigger signals when in TRANSMIT mode with active connection
         this.effectManager.onTriggerKey = (type: 'down' | 'up', keyCode: number, effectIds: string[]) => {
             if (this.networkController.currentMode === 'send' && this.networkController.activeTargetIp) {
                 const oscAddress = type === 'down' ? '/sceneplus/play' : '/sceneplus/stop';
                 for (const id of effectIds) {
-                    window.api.sendOsc(this.networkController.activeTargetIp, oscAddress, [id, keyCode]);
+                    let paramsJson = '';
+                    if (type === 'down') {
+                        const params = this.effectManager.effectParams[id];
+                        if (params) {
+                            paramsJson = JSON.stringify(params);
+                            console.log(`[OSC OUT] Preparing /sceneplus/play for ${id}. Current params:`, params);
+                            // Also send individual param messages for UI updates on the remote end (if they have UI open)
+                            for (const [key, value] of Object.entries(params)) {
+                                window.api.sendOsc(this.networkController.activeTargetIp, '/sceneplus/param', [id, key, value]);
+                            }
+                        } else {
+                            console.log(`[OSC OUT] No params found for ${id}. paramsJson will be empty.`);
+                        }
+                    }
+                    
+                    if (type === 'down' && paramsJson) {
+                        console.log(`[OSC OUT] Sending ${oscAddress} with paramsJson:`, paramsJson);
+                        window.api.sendOsc(this.networkController.activeTargetIp, oscAddress, [id, keyCode, paramsJson]);
+                    } else {
+                        console.log(`[OSC OUT] Sending ${oscAddress} WITHOUT paramsJson. (type=${type}, paramsJson="${paramsJson}")`);
+                        window.api.sendOsc(this.networkController.activeTargetIp, oscAddress, [id, keyCode]);
+                    }
                 }
             }
         };

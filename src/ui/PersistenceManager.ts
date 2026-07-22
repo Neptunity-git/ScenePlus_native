@@ -31,7 +31,8 @@ export class PersistenceManager {
                 1: {}, 2: {}, 3: {}, 4: {},
                 5: {}, 6: {}, 7: {}
             },
-            customEffectNames: {}
+            customEffectNames: {},
+            effectParams: {}
         };
     }
 
@@ -68,6 +69,14 @@ export class PersistenceManager {
                             if (titleEl) titleEl.textContent = customName;
                             item.meta.name = customName;
                         }
+                    }
+                }
+            }
+            
+            if (this.state.effectParams) {
+                for (const [effectId, params] of Object.entries(this.state.effectParams)) {
+                    for (const [k, v] of Object.entries(params as any)) {
+                        this.effectManager.setParam(effectId, k, v, false);
                     }
                 }
             }
@@ -151,6 +160,7 @@ export class PersistenceManager {
 
     public async save() {
         this.state.presets[this.state.currentPreset] = { ...this.effectManager.keyBindings };
+        this.state.effectParams = { ...this.effectManager.effectParams };
         this.syncAssignedKeysToMain();
         await window.api.saveSettings(this.state);
     }

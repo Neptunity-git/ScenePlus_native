@@ -2,11 +2,8 @@
   # Use modern PowerShell to add the firewall rule (installer already has Admin rights via UAC)
   DetailPrint "Configuring Windows Firewall (PowerShell)..."
   ExecWait 'powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -Command "New-NetFirewallRule -DisplayName \"ScenePlus+\" -Direction Inbound -Program \"$INSTDIR\ScenePlus+.exe\" -Action Allow -Profile Any -ErrorAction SilentlyContinue"'
-  # Clean up legacy 1.0 directory (sceneplus) if it exists
   DetailPrint "Cleaning up legacy 1.0 AppData..."
-  SetShellVarContext current
-  RMDir /r "$APPDATA\sceneplus"
-  SetShellVarContext all
+  ExecWait 'powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -Command "$$paths = @(\"$$env:APPDATA\sceneplus\effects\", \"$$env:APPDATA\ScenePlus+\effects\"); foreach ($$p in $$paths) { if (Test-Path $$p) { Get-ChildItem -Path $$p -Directory | ForEach-Object { if (Test-Path \"$$($$_.FullName)\*.html\") { Remove-Item -Path $$_.FullName -Recurse -Force } } } }"'
 !macroend
 
 !macro customUnInstall
