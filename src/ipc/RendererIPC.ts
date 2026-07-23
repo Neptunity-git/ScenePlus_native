@@ -33,7 +33,9 @@ export class RendererIPC {
 
     private initOscRouter() {
         this.registerOscHandler('/sceneplus/sys/discover', (_args, senderIp) => {
-            window.api.sendOsc(senderIp, '/sceneplus/sys/discovered', [this.networkController.activeHttpPort]);
+            if (this.networkController.currentMode === 'receive') {
+                window.api.sendOsc(senderIp, '/sceneplus/sys/discovered', [this.networkController.activeHttpPort]);
+            }
         });
 
         this.registerOscHandler('/sceneplus/sys/discovered', (_args, senderIp) => {

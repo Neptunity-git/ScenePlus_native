@@ -104,6 +104,11 @@ export class NetworkController {
     }
 
     public handlePing(senderIp: string, senderHttpPort: number): void {
+        if (this.currentMode !== 'receive') {
+            uiLog(`[RX] Rejected connection from ${senderIp} (not in RECEIVE mode)`, 'error');
+            return;
+        }
+
         window.api.sendOsc(senderIp, '/sceneplus/sys/pong', []);
 
         if (!this.receivedConnections.has(senderIp)) {

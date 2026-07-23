@@ -252,7 +252,7 @@ export class UIManager implements IUIManager {
             card.style.marginBottom = '6px';
             card.style.display = 'flex';
             card.style.alignItems = 'center';
-            card.style.justifyContent = 'space-between';
+            card.style.justifyContent = 'center';
             card.style.cursor = 'pointer';
             card.style.transition = 'all 0.2s ease';
             card.style.boxShadow = 'inset 0 0 8px rgba(20, 250, 200, 0.1)';
@@ -272,23 +272,14 @@ export class UIManager implements IUIManager {
 
             const ipLabel = document.createElement('span');
             ipLabel.style.fontFamily = 'monospace';
-            ipLabel.style.fontSize = '0.95rem';
+            ipLabel.style.fontSize = '1.05rem'; // slightly larger since it's the only thing
             ipLabel.style.fontWeight = 'bold';
             ipLabel.style.color = 'var(--neon-cyan)';
             ipLabel.style.textShadow = '0 0 5px rgba(20, 250, 200, 0.5)';
-            ipLabel.style.letterSpacing = '0.5px';
+            ipLabel.style.letterSpacing = '1px'; // a bit more spacing
             ipLabel.textContent = ip;
 
-            const actionBadge = document.createElement('span');
-            actionBadge.style.fontSize = '0.65rem';
-            actionBadge.style.color = 'var(--neon-cyan)';
-            actionBadge.style.opacity = '0.8';
-            actionBadge.style.letterSpacing = '0.5px';
-            actionBadge.style.fontFamily = 'var(--font-cyber)';
-            actionBadge.textContent = '⚡ CONNECT';
-
             card.appendChild(ipLabel);
-            card.appendChild(actionBadge);
             listEl.appendChild(card);
         });
     }
