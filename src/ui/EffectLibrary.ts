@@ -18,6 +18,33 @@ export class EffectLibrary {
 
         this._setupFileDropZone();
         this._setupFilterControls();
+
+        window.addEventListener('effect-meta-updated', (e: any) => {
+            const { effectId, meta } = e.detail;
+            const item = this.allEffects.find(x => x.effectId === effectId);
+            if (item) {
+                item.meta = meta;
+
+                let displayName = this.effectManager.effectNames?.[effectId];
+                // If it wasn't manually renamed in the UI, use meta.name
+                if (!this.effectManager.effectNames || !this.effectManager.effectNames[effectId]) {
+                    displayName = meta.name || effectId;
+                } else if (displayName === effectId && meta.name) {
+                    displayName = meta.name;
+                }
+
+                const titleEl = item.card.querySelector('.card-title');
+                if (titleEl && !titleEl.querySelector('input')) {
+                    titleEl.textContent = displayName || effectId;
+                }
+
+                const metaEl = item.card.querySelector('.card-meta');
+                if (metaEl) {
+                    metaEl.innerHTML = `<span class="card-type">${meta.mediatype}</span><span class="card-mode">${meta.playmode}</span>`;
+                }
+                this._applyFilters();
+            }
+        });
     }
 
     private _setupFileDropZone() {
@@ -83,6 +110,9 @@ export class EffectLibrary {
 
         let displayName = this.effectManager.effectNames?.[effectId] || meta.name || effectId;
 
+        const cardInfoEl = document.createElement('div');
+        cardInfoEl.className = 'card-info';
+
         const titleEl = document.createElement('div');
         titleEl.className = 'card-title';
         titleEl.textContent = displayName;
@@ -94,12 +124,15 @@ export class EffectLibrary {
             this._startInlineRename(effectId, meta, titleEl);
         });
 
-        const actionsEl = document.createElement('div');
-        actionsEl.className = 'card-actions';
-
         const metaEl = document.createElement('div');
         metaEl.className = 'card-meta';
         metaEl.innerHTML = `<span class="card-type">${meta.mediatype}</span><span class="card-mode">${meta.playmode}</span>`;
+
+        cardInfoEl.appendChild(metaEl);
+        cardInfoEl.appendChild(titleEl);
+
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'card-actions';
 
         const btnGroup = document.createElement('div');
         btnGroup.style.display = 'flex';
@@ -143,16 +176,48 @@ export class EffectLibrary {
                         delete this.effectManager.effectNames[effectId];
                     }
                     this.container.dispatchEvent(new CustomEvent('effect-deleted', { detail: { effectId } }));
+                } else {
+                    window.api.alertDialog({
+                        message: 'Failed to completely delete the effect.',
+                        detail: `The files might be opened in an external editor (like VSCode). Please close the editor and try deleting again.\n\nError: ${result?.error || 'Unknown error'}`
+                    });
                 }
             }
         });
 
+        // Edit Button (Code <svg>)
+        const editBtn = document.createElement('button');
+        editBtn.className = 'card-edit-btn';
+        editBtn.title = 'Edit Source (Fork)';
+        editBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
+        editBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+
+            const currentName = this.effectManager.effectNames?.[effectId] || meta.name || effectId;
+            const ok = await window.api.confirmDialog({
+                message: 'Create a development copy of this effect and open it in your external editor?',
+                detail: `[ ${currentName} ]\nA new 'dev_' effect will be added to your library.`
+            });
+
+            if (!ok) return;
+
+            const result = await window.api.forkAndEditEffect(effectId);
+            if (result && result.success && result.hash && result.meta && result.basePath) {
+                this.effectManager.registerEffect(result.hash, result.meta, result.basePath);
+                this.effectManager.effectNames = this.effectManager.effectNames || {};
+                this.effectManager.effectNames[result.hash] = result.meta.name;
+                this.addCard(result.hash, result.meta);
+            } else if (result && result.error) {
+                window.api.alertDialog({ message: 'Failed to fork effect for editing', detail: result.error });
+            }
+        });
+
+        btnGroup.appendChild(editBtn);
         btnGroup.appendChild(renameBtn);
         btnGroup.appendChild(deleteBtn);
 
-        actionsEl.appendChild(metaEl);
         actionsEl.appendChild(btnGroup);
-        card.appendChild(titleEl);
+        card.appendChild(cardInfoEl);
         card.appendChild(actionsEl);
 
         card.addEventListener('dragstart', (e) => {

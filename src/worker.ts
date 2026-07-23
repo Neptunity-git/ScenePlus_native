@@ -17,7 +17,7 @@ if (process.parentPort) {
             try {
                 // 1. Streaming SHA-256 Hash
                 process.parentPort?.postMessage({ type: 'status', message: 'Hashing file...' });
-                const hash = await getFileHash(filePath);
+                const hash = e.data.expectedHash || await getFileHash(filePath);
 
                 // 2. Extract
                 process.parentPort?.postMessage({ type: 'status', message: 'Extracting content...' });

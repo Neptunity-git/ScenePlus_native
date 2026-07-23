@@ -75,6 +75,29 @@ export class EffectManager {
         
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
+
+        if (window.api && window.api.onHotReloadEffect) {
+            window.api.onHotReloadEffect(async (effectId) => {
+                const player = this.players[effectId];
+                if (player) {
+                    try {
+                        const metaUrl = `${player.basePath}meta.json?t=${Date.now()}`;
+                        const res = await fetch(metaUrl);
+                        if (res.ok) {
+                            const newMeta = await res.json();
+                            player.meta = newMeta;
+                            if (typeof (player as any).reloadModuleLive === 'function') {
+                                (player as any).reloadModuleLive(this.getEnv(effectId));
+                            }
+                            const ev = new CustomEvent('effect-meta-updated', { detail: { effectId, meta: newMeta } });
+                            window.dispatchEvent(ev);
+                        }
+                    } catch(e) {
+                        console.error('Failed to update meta on hot-reload', e);
+                    }
+                }
+            });
+        }
     }
     
     private resizeCanvas() {
