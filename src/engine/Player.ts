@@ -41,6 +41,9 @@ export class Player {
         if (type === 'code') {
             const jsPath = srcPath.replace('.html', '.js');
             let moduleUrl = this.basePath + jsPath;
+            if (this.effectId.startsWith('dev_')) {
+                moduleUrl += `?t=${Date.now()}`;
+            }
             // Need to convert to a valid URL for dynamic import. 
             // In electron, file:// or custom scheme works.
             this.modulePromise = import(moduleUrl).catch(e => {
@@ -106,6 +109,14 @@ export class Player {
         } else if (type === 'image') {
             instance.mediaEl = this.cachedMediaEl as HTMLImageElement;
         } else if (type === 'code') {
+            if (this.effectId.startsWith('dev_')) {
+                const srcPath = this.meta.path.startsWith('/') ? this.meta.path.substring(1) : this.meta.path;
+                const jsPath = srcPath.replace('.html', '.js');
+                this.modulePromise = import(this.basePath + jsPath + `?t=${Date.now()}`).catch(e => {
+                    console.error('Failed to hot-reload module:', e);
+                    return null;
+                });
+            }
             if (this.modulePromise) {
                 this.modulePromise.then(mod => {
                     if (mod && mod.init) {
@@ -174,5 +185,28 @@ export class Player {
             instance.state = undefined;
         }
         this.pool = [];
+    }
+
+    public reloadModuleLive(env: any) {
+        if (!this.effectId.startsWith('dev_')) return;
+        const srcPath = this.meta.path.startsWith('/') ? this.meta.path.substring(1) : this.meta.path;
+        const jsPath = srcPath.replace('.html', '.js');
+        this.modulePromise = import(this.basePath + jsPath + `?t=${Date.now()}`).catch(e => {
+            console.error('Failed to hot-reload module:', e);
+            return null;
+        });
+        
+        this.modulePromise.then(mod => {
+            if (!mod) return;
+            for (const instance of this.pool) {
+                if (instance.active || instance.releasing) {
+                    instance.module = mod;
+                    if (mod.init) {
+                        // Re-initialize state so changes take effect immediately
+                        instance.state = mod.init(env);
+                    }
+                }
+            }
+        });
     }
 }

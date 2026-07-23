@@ -23,8 +23,8 @@ export class IpcHandler {
         const mainWindow = this.windowManager.getWindow();
 
         // --- Effect Service IPCs ---
-        ipcMain.handle('import-effect-background', async (event, sourcePath, customDestOrIsGuest) => {
-            return this.effectService.importEffectBackground(sourcePath, customDestOrIsGuest);
+        ipcMain.handle('import-effect-background', async (event, sourcePath, customDestOrIsGuest, expectedHash) => {
+            return this.effectService.importEffectBackground(sourcePath, customDestOrIsGuest, expectedHash);
         });
 
         ipcMain.handle('unpack-effect', async (event, buffer, effectId) => {
@@ -33,6 +33,10 @@ export class IpcHandler {
 
         ipcMain.handle('delete-effect', async (event, effectId) => {
             return this.effectService.deleteEffect(effectId);
+        });
+
+        ipcMain.handle('fork-and-edit-effect', async (event, effectId) => {
+            return this.effectService.forkAndEditEffect(effectId);
         });
 
         ipcMain.handle('scan-effects', async () => {

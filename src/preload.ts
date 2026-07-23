@@ -14,12 +14,13 @@ export const api = {
 
     // Effect management
     unpackEffect: (buffer: ArrayBuffer, effectId: string): Promise<{success: boolean; meta?: any; effectId?: string; basePath?: string; error?: string}> => ipcRenderer.invoke('unpack-effect', buffer, effectId),
-    importEffectBackground: (sourcePath: string, customDestOrIsGuest?: string | boolean): Promise<ImportResult> => ipcRenderer.invoke('import-effect-background', sourcePath, customDestOrIsGuest),
+    importEffectBackground: (sourcePath: string, customDestOrIsGuest?: string | boolean, expectedHash?: string): Promise<ImportResult> => ipcRenderer.invoke('import-effect-background', sourcePath, customDestOrIsGuest, expectedHash),
     readDoc: (docName: string): Promise<{success: boolean; content?: string; error?: string}> => ipcRenderer.invoke('read-doc', docName),
     exportDoc: (docName: string, content: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('export-doc', docName, content),
     deleteEffect: (effectId: string): Promise<{success: boolean; error?: string}> => ipcRenderer.invoke('delete-effect', effectId),
     scanEffects: (): Promise<{success: boolean; effects?: any[]; error?: string}> => ipcRenderer.invoke('scan-effects'),
     captureScreen: (resolution: string): Promise<CaptureResult> => ipcRenderer.invoke('capture-screen', resolution),
+    forkAndEditEffect: (effectId: string): Promise<{success: boolean; hash?: string; meta?: any; basePath?: string; error?: string}> => ipcRenderer.invoke('fork-and-edit-effect', effectId),
     
     // Effect Composer
     openEffectComposer: (): Promise<{success: boolean}> => ipcRenderer.invoke('open-effect-composer'),
@@ -30,6 +31,9 @@ export const api = {
     // Listeners for progress
     onImportProgress: (callback: (percent: number) => void) => ipcRenderer.on('import-progress', (_event, value) => callback(value)),
     onImportStatus: (callback: (message: string) => void) => ipcRenderer.on('import-status', (_event, message) => callback(message)),
+    
+    // Developer
+    onHotReloadEffect: (callback: (effectId: string) => void) => ipcRenderer.on('hot-reload-effect', (_event, effectId) => callback(effectId)),
 
     // File picker
     openFileDialog: (): Promise<{canceled: boolean; files: string[]}> => ipcRenderer.invoke('open-file-dialog'),

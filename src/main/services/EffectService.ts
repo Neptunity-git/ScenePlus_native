@@ -1,4 +1,4 @@
-import { app, protocol, utilityProcess } from 'electron';
+import { app, protocol, utilityProcess, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -11,6 +11,7 @@ import { EffectMeta, ImportResult } from '../../shared/types';
 export class EffectService {
     private windowManager: WindowManager;
     private readonly assetsDir: string;
+    private watchers: Map<string, fs.FSWatcher> = new Map();
 
     constructor(windowManager: WindowManager) {
         this.windowManager = windowManager;
@@ -58,7 +59,8 @@ export class EffectService {
             } else if (fs.existsSync(srcDir) && fs.statSync(srcDir).isDirectory()) {
                 try {
                     const metaPath = path.join(srcDir, 'meta.json');
-                    const hashSource = fs.existsSync(metaPath) ? fs.readFileSync(metaPath, 'utf8') : s;
+                    // Use the absolute path of the folder to ensure unique ID per folder location
+                    const hashSource = path.resolve(srcDir);
                     const hash = crypto.createHash('sha256').update(hashSource).digest('hex');
                     
                     const dest = path.join(effectsDir, hash);
@@ -77,19 +79,20 @@ export class EffectService {
     public registerFileProtocol(): void {
         protocol.registerFileProtocol('scene', (request, callback) => {
             const urlPath = request.url.substring(8);
+            const purePath = urlPath.split('?')[0]; // Strip query parameters like ?t=...
 
-            if (urlPath.startsWith('_core/')) {
-                const corePath = path.join(this.assetsDir, 'system', urlPath.substring(6));
+            if (purePath.startsWith('_core/')) {
+                const corePath = path.join(this.assetsDir, 'system', purePath.substring(6));
                 return callback({ path: path.normalize(corePath) });
             }
 
-            const decodedPath = decodeURIComponent(urlPath);
+            const decodedPath = decodeURIComponent(purePath);
             const filePath = path.join(this.getEffectsDir(), decodedPath);
             callback({ path: path.normalize(filePath) });
         });
     }
 
-    public async importEffectBackground(sourcePath: string, customDestOrIsGuest: string | boolean): Promise<ImportResult> {
+    public async importEffectBackground(sourcePath: string, customDestOrIsGuest: string | boolean, expectedHash?: string): Promise<ImportResult> {
         return new Promise((resolve) => {
             try {
                 let finalDest = this.getEffectsDir();
@@ -111,7 +114,8 @@ export class EffectService {
                 worker.postMessage({
                     action: 'process-import',
                     filePath: sourcePath,
-                    destDir: finalDest
+                    destDir: finalDest,
+                    expectedHash: expectedHash
                 });
 
                 const win = this.windowManager.getWindow();
@@ -164,6 +168,9 @@ export class EffectService {
                             meta,
                             basePath: `scene://${entry.name}/`,
                         });
+                        if (entry.name.startsWith('dev_')) {
+                            this.watchDevEffect(entry.name, path.join(dir, entry.name));
+                        }
                     }
                 }
             }
@@ -200,9 +207,31 @@ export class EffectService {
     public deleteEffect(effectId: string): { success: boolean; error?: string } {
         try {
             const destDir = path.join(this.getEffectsDir(), effectId);
-            if (fs.existsSync(destDir)) {
-                fs.rmSync(destDir, { recursive: true, force: true });
+            if (!fs.existsSync(destDir)) {
+                if (this.watchers.has(effectId)) {
+                    this.watchers.get(effectId)?.close();
+                    this.watchers.delete(effectId);
+                }
+                return { success: true };
             }
+
+            const hadWatcher = this.watchers.has(effectId);
+            if (hadWatcher) {
+                this.watchers.get(effectId)?.close();
+                this.watchers.delete(effectId);
+            }
+
+            const trashDir = destDir + '_trash_' + Date.now();
+            try {
+                fs.renameSync(destDir, trashDir);
+            } catch (err: any) {
+                if (hadWatcher) {
+                    this.watchDevEffect(effectId, destDir);
+                }
+                return { success: false, error: 'Files are locked by an external editor.' };
+            }
+
+            fs.rmSync(trashDir, { recursive: true, force: true });
             return { success: true };
         } catch (err: any) {
             return { success: false, error: err.message };
@@ -248,6 +277,70 @@ export class EffectService {
         } catch(e) {
             console.error('[CLEANUP] Failed:', e);
             return { success: false };
+        }
+    }
+
+    public async forkAndEditEffect(effectId: string): Promise<{ success: boolean; hash?: string; meta?: any; basePath?: string; error?: string }> {
+        try {
+            const originalDir = path.join(this.getEffectsDir(), effectId);
+            if (!fs.existsSync(originalDir)) {
+                return { success: false, error: 'Original effect not found' };
+            }
+
+            const hash = 'dev_' + Date.now().toString();
+            const destDir = path.join(this.getEffectsDir(), hash);
+            fs.mkdirSync(destDir, { recursive: true });
+            
+            // Copy all files
+            fs.cpSync(originalDir, destDir, { recursive: true });
+
+            // Update meta.json
+            const metaPath = path.join(destDir, 'meta.json');
+            let meta: any = {};
+            if (fs.existsSync(metaPath)) {
+                meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                if (!meta.name.startsWith('[Dev] ')) {
+                    meta.name = '[Dev] ' + meta.name;
+                }
+                fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf8');
+            }
+
+            // Try to open in VS Code, fallback to file explorer
+            require('child_process').exec(`code "${destDir}"`, (err: any) => {
+                if (err) {
+                    shell.openPath(destDir);
+                }
+            });
+
+            this.watchDevEffect(hash, destDir);
+
+            return {
+                success: true,
+                hash,
+                meta,
+                basePath: `scene://${hash}/`
+            };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
+
+    private watchDevEffect(effectId: string, dir: string) {
+        if (!effectId.startsWith('dev_')) return;
+        if (this.watchers.has(effectId)) return;
+        
+        let timeout: NodeJS.Timeout | null = null;
+        try {
+            const watcher = fs.watch(dir, { recursive: true }, (event, filename) => {
+                if (timeout) clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    const win = this.windowManager.getWindow();
+                    win?.webContents.send('hot-reload-effect', effectId);
+                }, 100);
+            });
+            this.watchers.set(effectId, watcher);
+        } catch (e) {
+            console.error('Failed to watch dev effect:', e);
         }
     }
 }

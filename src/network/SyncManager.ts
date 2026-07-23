@@ -88,7 +88,7 @@ export class SyncManager {
                 if (tempFile) {
                     const isGuest = (syncMode === 'guest');
                     
-                    const result = await window.api.importEffectBackground(tempFile, isGuest);
+                    const result = await window.api.importEffectBackground(tempFile, isGuest, hash);
                     if (result.success && result.meta && result.basePath && result.hash) {
                         this.effectManager.registerEffect(result.hash, result.meta, result.basePath);
                         
