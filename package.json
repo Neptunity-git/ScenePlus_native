@@ -22,7 +22,7 @@
   "author": "Neo_Neptunity",
   "license": "ISC",
   "dependencies": {
-    "adm-zip": "^0.5.17",
+    "adm-zip": "^0.6.0",
     "marked": "^18.0.6",
     "node-addon-api": "^8.9.0",
     "node-osc": "^11.4.0",
