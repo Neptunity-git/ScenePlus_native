@@ -11,6 +11,7 @@ export class ConfigModal {
     private selectKeyEngine: HTMLSelectElement;
     private selectKeySettings: HTMLSelectElement;
     private selectSyncMode: HTMLSelectElement;
+    private selectTargetDisplay: HTMLSelectElement;
     private presetNameGrid: HTMLElement;
 
     private fKeys: { name: string; code: number }[];
@@ -28,6 +29,7 @@ export class ConfigModal {
         this.selectKeyEngine = document.getElementById('config-key-engine') as HTMLSelectElement;
         this.selectKeySettings = document.getElementById('config-key-settings') as HTMLSelectElement;
         this.selectSyncMode = document.getElementById('config-sync-mode') as HTMLSelectElement;
+        this.selectTargetDisplay = document.getElementById('config-target-display') as HTMLSelectElement;
         this.presetNameGrid = document.getElementById('preset-name-grid') as HTMLElement;
 
         this.fKeys = [
@@ -70,8 +72,29 @@ export class ConfigModal {
         });
     }
 
-    public open(networkMode = 'neutral') {
+    public async open(networkMode = 'neutral') {
         const state = this.persistence.state;
+
+        if (this.selectTargetDisplay) {
+            try {
+                const displays = await window.api.getDisplays();
+                let optionsHtml = '';
+                displays.forEach(d => {
+                    const prefix = d.isPrimary ? '[Primary] ' : '';
+                    optionsHtml += `<option value="${d.id}">${prefix}${d.label}</option>`;
+                });
+                this.selectTargetDisplay.innerHTML = optionsHtml;
+
+                if (state.displayId !== undefined && displays.some(d => d.id === state.displayId)) {
+                    this.selectTargetDisplay.value = state.displayId.toString();
+                } else if (displays.length > 0) {
+                    const primary = displays.find(d => d.isPrimary) || displays[0];
+                    this.selectTargetDisplay.value = primary.id.toString();
+                }
+            } catch (e) {
+                console.warn('[ConfigModal] Failed to get displays:', e);
+            }
+        }
 
         this.inputMaxN.value = (state.maxN || 5).toString();
         if (this.chkBlockAssignedKeys) {
@@ -129,6 +152,12 @@ export class ConfigModal {
         });
 
         const blockAssignedKeys = this.chkBlockAssignedKeys ? this.chkBlockAssignedKeys.checked : false;
+        
+        let displayId: number | undefined = undefined;
+        if (this.selectTargetDisplay && this.selectTargetDisplay.value) {
+            const parsed = parseInt(this.selectTargetDisplay.value, 10);
+            if (!isNaN(parsed)) displayId = parsed;
+        }
 
         this.persistence.updateConfig({
             maxN,
@@ -136,8 +165,13 @@ export class ConfigModal {
             engineKey,
             settingsKey,
             syncMode: this.selectSyncMode ? this.selectSyncMode.value : 'streaming',
+            displayId,
             presetNames
         });
+
+        if (displayId !== undefined) {
+            await window.api.setTargetDisplay(displayId);
+        }
 
         if (this.onConfigSaved) {
             this.onConfigSaved(presetNames);

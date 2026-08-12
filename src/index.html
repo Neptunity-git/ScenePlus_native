@@ -99,10 +99,23 @@
         <button class="cyber-btn accent" id="btn-make-fx">+ MAKE FX</button>
       </div>
 
-      <div id="library-grid" class="drop-zone cyber-grid">
-        <!-- Effect cards will be appended here -->
+      <div class="cyber-grid-wrapper">
+        <div id="library-breadcrumbs" class="cyber-breadcrumbs">
+          <!-- Breadcrumbs rendered by JS -->
+        </div>
+        <div id="library-grid" class="drop-zone cyber-grid">
+          <!-- Bin cards and effect cards will be appended here -->
+        </div>
       </div>
     </section>
+
+    <!-- Library Right-Click Context Menu -->
+    <div id="library-context-menu" class="cyber-context-menu hidden">
+      <div class="context-menu-item" id="ctx-new-bin">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+        <span>+ NEW BIN</span>
+      </div>
+    </div>
 
     <!-- Background Import Overlay (Phase 2.6) -->
     <div id="import-overlay" class="cyber-modal-overlay hidden">
@@ -133,6 +146,16 @@
         <button id="btn-close-config" class="cyber-btn icon">&times;</button>
       </div>
       <div class="cyber-modal-body">
+
+        <div class="config-section">
+          <h4>TARGET DISPLAY</h4>
+          <label>
+            Active Monitor
+            <select id="config-target-display" class="cyber-select">
+              <!-- Dynamically populated by JS -->
+            </select>
+          </label>
+        </div>
 
         <div class="config-section">
           <h4>ENGINE SETTINGS</h4>

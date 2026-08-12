@@ -18,6 +18,12 @@ export class PersistenceManager {
             this.renameEffect(effectId, newName);
         };
 
+        this.effectLibrary.onFoldersUpdated = (folderPaths, effectFolders) => {
+            this.state.folderPaths = [...folderPaths];
+            this.state.effectFolders = { ...effectFolders };
+            this.save();
+        };
+
         this.state = {
             currentPreset: 1,
             maxN: 5,
@@ -32,7 +38,9 @@ export class PersistenceManager {
                 5: {}, 6: {}, 7: {}
             },
             customEffectNames: {},
-            effectParams: {}
+            effectParams: {},
+            folderPaths: ['/'],
+            effectFolders: {}
         };
     }
 
@@ -97,6 +105,11 @@ export class PersistenceManager {
 
             this.effectManager.maxN = this.state.maxN;
             await window.api.setSystemKeys(this.state.engineKey, this.state.settingsKey);
+            if (this.state.displayId !== undefined) {
+                await window.api.setTargetDisplay(this.state.displayId);
+            }
+
+            this.effectLibrary.setFolders(this.state.folderPaths, this.state.effectFolders);
         }
 
         this.switchPreset(this.state.currentPreset, true);
@@ -155,12 +168,17 @@ export class PersistenceManager {
         if (this.state.engineKey && this.state.settingsKey) {
             await window.api.setSystemKeys(this.state.engineKey, this.state.settingsKey);
         }
+        if (this.state.folderPaths || this.state.effectFolders) {
+            this.effectLibrary.setFolders(this.state.folderPaths, this.state.effectFolders);
+        }
         this.switchPreset(this.state.currentPreset, true);
     }
 
     public async save() {
         this.state.presets[this.state.currentPreset] = { ...this.effectManager.keyBindings };
         this.state.effectParams = { ...this.effectManager.effectParams };
+        this.state.folderPaths = [...this.effectLibrary.folderPaths];
+        this.state.effectFolders = { ...this.effectLibrary.effectFolders };
         this.syncAssignedKeysToMain();
         await window.api.saveSettings(this.state);
     }

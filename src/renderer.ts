@@ -11,25 +11,45 @@ import { SyncManager } from './network/SyncManager';
 import { UIManager } from './ui/UIManager';
 import { RendererIPC } from './ipc/RendererIPC';
 
-// Setup OS UI Scaling (Fit both width and height without micro-fluctuations)
+// Setup OS UI Scaling (Fit both width and height without micro-fluctuations & resilient to sleep/wake/DPI changes)
 let currentZoom = 0;
-function initZoom() {
+let targetDisplayBounds: { width: number; height: number } | null = null;
+
+function updateZoom(force = false) {
     const baseWidth = 1280;
     const baseHeight = 720;
-    const currentWidth = window.innerWidth || window.screen.width;
-    const currentHeight = window.innerHeight || window.screen.height;
-    
+
+    // Use constant targetDisplayBounds from Main process if available,
+    // otherwise fallback to screen dimensions (window.screen.width / height)
+    let currentWidth = targetDisplayBounds ? targetDisplayBounds.width : (window.screen.width || 1280);
+    let currentHeight = targetDisplayBounds ? targetDisplayBounds.height : (window.screen.height || 720);
+
+    if (!currentWidth || !currentHeight) return;
+
     // Scale proportionally to fit within both dimensions
     const newZoom = Math.min(currentWidth / baseWidth, currentHeight / baseHeight);
-    
-    // Threshold check (2%) to prevent subpixel rounding & resize feedback loops
-    if (Math.abs(newZoom - currentZoom) > 0.02) {
+
+    if (force || Math.abs(newZoom - currentZoom) > 0.005) {
         currentZoom = newZoom;
         window.api.setZoomFactor(newZoom);
     }
 }
-initZoom();
-window.addEventListener('resize', initZoom);
+
+updateZoom(true);
+
+window.addEventListener('resize', () => updateZoom());
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        setTimeout(() => updateZoom(true), 150);
+    }
+});
+
+if (window.api.onDisplayMetricsUpdated) {
+    window.api.onDisplayMetricsUpdated(() => {
+        setTimeout(() => updateZoom(true), 250);
+    });
+}
 
 // Core Managers
 const effectManager = new EffectManager(1); // Reduced poolSize
@@ -171,6 +191,11 @@ window.api.onStateChanged((state: any) => {
     engineOn = state.engineOn;
     settingsOpen = state.settingsOpen;
 
+    if (state.displayBounds) {
+        targetDisplayBounds = state.displayBounds;
+        updateZoom(true);
+    }
+
     if (engineOn) {
         if (offIndicator) offIndicator.classList.add('hidden');
         uiLog('Engine ON', 'default');
@@ -187,6 +212,7 @@ window.api.onStateChanged((state: any) => {
         if (configModal) configModal.close();
         if (virtualKeyboard) virtualKeyboard.dismissPopup();
         if (uiManager) uiManager.hideDiagModal();
+        if (effectLibrary) effectLibrary.dismissContextMenu();
         docsViewer.hide();
     }
 });

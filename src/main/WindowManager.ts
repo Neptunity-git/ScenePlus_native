@@ -10,9 +10,42 @@ export class WindowManager {
         this.state = initialState;
     }
 
+    public getTargetDisplay(displayId?: number): Electron.Display {
+        const displays = screen.getAllDisplays();
+        if (displayId !== undefined) {
+            const found = displays.find(d => d.id === displayId);
+            if (found) return found;
+        }
+        return screen.getPrimaryDisplay();
+    }
+
+    public setDisplay(displayId: number): void {
+        this.state.displayId = displayId;
+        this.reassertBounds();
+    }
+
+    public reassertBounds(): void {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            const targetDisplay = this.getTargetDisplay(this.state.displayId);
+            this.state.displayBounds = {
+                width: targetDisplay.bounds.width,
+                height: targetDisplay.bounds.height
+            };
+            this.mainWindow.setBounds({
+                x: targetDisplay.bounds.x,
+                y: targetDisplay.bounds.y,
+                width: targetDisplay.bounds.width,
+                height: targetDisplay.bounds.height
+            });
+            this.mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+            this.updateRendererState();
+            this.mainWindow.webContents.send('display-metrics-updated');
+        }
+    }
+
     public createWindow(): void {
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width, height, x, y } = primaryDisplay.bounds;
+        const targetDisplay = this.getTargetDisplay(this.state.displayId);
+        const { width, height, x, y } = targetDisplay.bounds;
 
         this.mainWindow = new BrowserWindow({
             x,
@@ -41,7 +74,7 @@ export class WindowManager {
         this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
         this.mainWindow.webContents.on('did-finish-load', () => {
-            this.updateRendererState();
+            this.reassertBounds();
         });
     }
 

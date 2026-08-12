@@ -1,6 +1,15 @@
 export interface AppState {
     engineOn: boolean;
     settingsOpen: boolean;
+    displayId?: number;
+    displayBounds?: { width: number; height: number };
+}
+
+export interface DisplayInfo {
+    id: number;
+    label: string;
+    bounds: { x: number; y: number; width: number; height: number };
+    isPrimary: boolean;
 }
 
 export interface EffectMeta {
@@ -50,6 +59,9 @@ export interface SettingsConfig {
     maxEffects?: number;
     syncMode?: string;
     blockAssignedKeys?: boolean;
+    displayId?: number;
     presetNames?: Record<number, string>;
+    folderPaths?: string[];
+    effectFolders?: Record<string, string>;
     [key: string]: any;
 }
