@@ -27,8 +27,18 @@ export class WindowManager {
     public reassertBounds(): void {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             const targetDisplay = this.getTargetDisplay(this.state.displayId);
-            this.mainWindow.setBounds(targetDisplay.bounds);
+            this.state.displayBounds = {
+                width: targetDisplay.bounds.width,
+                height: targetDisplay.bounds.height
+            };
+            this.mainWindow.setBounds({
+                x: targetDisplay.bounds.x,
+                y: targetDisplay.bounds.y,
+                width: targetDisplay.bounds.width,
+                height: targetDisplay.bounds.height
+            });
             this.mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+            this.updateRendererState();
             this.mainWindow.webContents.send('display-metrics-updated');
         }
     }
@@ -64,7 +74,7 @@ export class WindowManager {
         this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
         this.mainWindow.webContents.on('did-finish-load', () => {
-            this.updateRendererState();
+            this.reassertBounds();
         });
     }
 

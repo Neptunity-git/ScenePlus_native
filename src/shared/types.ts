@@ -2,6 +2,7 @@ export interface AppState {
     engineOn: boolean;
     settingsOpen: boolean;
     displayId?: number;
+    displayBounds?: { width: number; height: number };
 }
 
 export interface DisplayInfo {

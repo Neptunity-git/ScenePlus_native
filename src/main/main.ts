@@ -11,6 +11,7 @@ app.commandLine.appendSwitch('disable-http-cache');
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 // Disable autoplay policy so audio/video can play without clicks
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+app.commandLine.appendSwitch('high-dpi-support', '1');
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {

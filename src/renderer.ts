@@ -13,18 +13,23 @@ import { RendererIPC } from './ipc/RendererIPC';
 
 // Setup OS UI Scaling (Fit both width and height without micro-fluctuations & resilient to sleep/wake/DPI changes)
 let currentZoom = 0;
+let targetDisplayBounds: { width: number; height: number } | null = null;
+
 function updateZoom(force = false) {
     const baseWidth = 1280;
     const baseHeight = 720;
-    const currentWidth = window.innerWidth || window.screen.width;
-    const currentHeight = window.innerHeight || window.screen.height;
+
+    // Use constant targetDisplayBounds from Main process if available,
+    // otherwise fallback to screen dimensions (window.screen.width / height)
+    let currentWidth = targetDisplayBounds ? targetDisplayBounds.width : (window.screen.width || 1280);
+    let currentHeight = targetDisplayBounds ? targetDisplayBounds.height : (window.screen.height || 720);
 
     if (!currentWidth || !currentHeight) return;
 
     // Scale proportionally to fit within both dimensions
     const newZoom = Math.min(currentWidth / baseWidth, currentHeight / baseHeight);
 
-    if (force || Math.abs(newZoom - currentZoom) > 0.01) {
+    if (force || Math.abs(newZoom - currentZoom) > 0.005) {
         currentZoom = newZoom;
         window.api.setZoomFactor(newZoom);
     }
@@ -185,6 +190,11 @@ export function toggleSettings() {
 window.api.onStateChanged((state: any) => {
     engineOn = state.engineOn;
     settingsOpen = state.settingsOpen;
+
+    if (state.displayBounds) {
+        targetDisplayBounds = state.displayBounds;
+        updateZoom(true);
+    }
 
     if (engineOn) {
         if (offIndicator) offIndicator.classList.add('hidden');
