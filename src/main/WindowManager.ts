@@ -10,9 +10,32 @@ export class WindowManager {
         this.state = initialState;
     }
 
+    public getTargetDisplay(displayId?: number): Electron.Display {
+        const displays = screen.getAllDisplays();
+        if (displayId !== undefined) {
+            const found = displays.find(d => d.id === displayId);
+            if (found) return found;
+        }
+        return screen.getPrimaryDisplay();
+    }
+
+    public setDisplay(displayId: number): void {
+        this.state.displayId = displayId;
+        this.reassertBounds();
+    }
+
+    public reassertBounds(): void {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            const targetDisplay = this.getTargetDisplay(this.state.displayId);
+            this.mainWindow.setBounds(targetDisplay.bounds);
+            this.mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+            this.mainWindow.webContents.send('display-metrics-updated');
+        }
+    }
+
     public createWindow(): void {
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width, height, x, y } = primaryDisplay.bounds;
+        const targetDisplay = this.getTargetDisplay(this.state.displayId);
+        const { width, height, x, y } = targetDisplay.bounds;
 
         this.mainWindow = new BrowserWindow({
             x,

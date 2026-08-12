@@ -1,6 +1,6 @@
 {
   "name": "sceneplus",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "Visual effect sampler for creatives and beginners",
   "main": "out/main/main.js",
   "scripts": {

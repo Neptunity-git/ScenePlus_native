@@ -74,6 +74,23 @@ export class IpcHandler {
             return { success: true };
         });
 
+        // --- Display Management ---
+        ipcMain.handle('get-displays', () => {
+            const displays = screen.getAllDisplays();
+            const primary = screen.getPrimaryDisplay();
+            return displays.map((d, index) => ({
+                id: d.id,
+                label: d.label || `Display ${index + 1} (${d.bounds.width}x${d.bounds.height})`,
+                bounds: d.bounds,
+                isPrimary: d.id === primary.id
+            }));
+        });
+
+        ipcMain.handle('set-target-display', async (event, displayId: number) => {
+            this.windowManager.setDisplay(displayId);
+            return { success: true };
+        });
+
         // --- Screen Capture ---
         ipcMain.handle('capture-screen', async (event, resolution) => {
             try {
@@ -81,10 +98,10 @@ export class IpcHandler {
                 if (resolution === 'mid') { width = 1280; height = 720; }
                 else if (resolution === 'high') { width = 1920; height = 1080; }
                 else if (resolution === 'full') {
-                    const primaryDisplay = screen.getPrimaryDisplay();
-                    const scaleFactor = primaryDisplay.scaleFactor;
-                    width = Math.round(primaryDisplay.bounds.width * scaleFactor);
-                    height = Math.round(primaryDisplay.bounds.height * scaleFactor);
+                    const targetDisplay = this.windowManager.getTargetDisplay(this.windowManager.getState().displayId);
+                    const scaleFactor = targetDisplay.scaleFactor;
+                    width = Math.round(targetDisplay.bounds.width * scaleFactor);
+                    height = Math.round(targetDisplay.bounds.height * scaleFactor);
                 }
                 
                 const sources = await desktopCapturer.getSources({ 

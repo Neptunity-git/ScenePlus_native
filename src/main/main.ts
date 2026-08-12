@@ -1,4 +1,4 @@
-import { app, protocol } from 'electron';
+import { app, protocol, powerMonitor, screen } from 'electron';
 import { WindowManager } from './WindowManager';
 import { InputManager } from './InputManager';
 import { NetworkService } from './services/NetworkService';
@@ -59,6 +59,22 @@ app.whenReady().then(() => {
     windowManager.createWindow();
     inputManager.startHooks();
     ipcHandler.registerAll();
+
+    // Debounced display metrics re-assertion for resolution changes and sleep/wake recovery
+    let displayDebounceTimer: NodeJS.Timeout | null = null;
+    const handleDisplayOrPowerChange = () => {
+        if (displayDebounceTimer) clearTimeout(displayDebounceTimer);
+        displayDebounceTimer = setTimeout(() => {
+            windowManager.reassertBounds();
+        }, 500);
+    };
+
+    screen.on('display-metrics-changed', handleDisplayOrPowerChange);
+    screen.on('display-added', handleDisplayOrPowerChange);
+    screen.on('display-removed', handleDisplayOrPowerChange);
+
+    powerMonitor.on('resume', handleDisplayOrPowerChange);
+    powerMonitor.on('unlock-screen', handleDisplayOrPowerChange);
 
     app.on('activate', () => {
         if (!windowManager.isAlive()) {

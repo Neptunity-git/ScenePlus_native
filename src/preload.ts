@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
-import { AppState, ImportResult, NetworkInterfaceInfo, CaptureResult, ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from './shared/types';
+import { AppState, DisplayInfo, ImportResult, NetworkInterfaceInfo, CaptureResult, ConfirmDialogOptions, AlertDialogOptions, SettingsConfig } from './shared/types';
 
 export const api = {
     // State & key events from main process
@@ -11,6 +11,10 @@ export const api = {
     onMouseDown: (callback: (data: { button: number; x: number; y: number; clicks: number }) => void) => ipcRenderer.on('mousedown', (_event, data) => callback(data)),
     onMouseUp: (callback: (data: { button: number; x: number; y: number }) => void) => ipcRenderer.on('mouseup', (_event, data) => callback(data)),
     onMouseWheel: (callback: (data: { x: number; y: number; amount: number; direction: number; rotation: number }) => void) => ipcRenderer.on('mousewheel', (_event, data) => callback(data)),
+
+    // Display Management
+    getDisplays: (): Promise<DisplayInfo[]> => ipcRenderer.invoke('get-displays'),
+    setTargetDisplay: (displayId: number): Promise<{success: boolean}> => ipcRenderer.invoke('set-target-display', displayId),
 
     // Effect management
     unpackEffect: (buffer: ArrayBuffer, effectId: string): Promise<{success: boolean; meta?: any; effectId?: string; basePath?: string; error?: string}> => ipcRenderer.invoke('unpack-effect', buffer, effectId),
@@ -68,8 +72,9 @@ export const api = {
         return webUtils.getPathForFile(file);
     },
 
-    // UI Scaling
-    setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor)
+    // UI Scaling & Display Events
+    setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
+    onDisplayMetricsUpdated: (callback: () => void) => ipcRenderer.on('display-metrics-updated', () => callback())
 };
 
 contextBridge.exposeInMainWorld('api', api);
