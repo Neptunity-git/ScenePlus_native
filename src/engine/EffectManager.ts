@@ -32,20 +32,20 @@ export class EffectManager {
     public effectNames?: Record<string, string>;
     public onTriggerKey?: (type: 'down' | 'up', keyCode: number, effectIds: string[]) => void;
     private heldKeys: Set<number | string>;
-    
+
     // Shared Canvas
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D | null;
-    
+
     // Env
     private mousePos = { x: 0, y: 0 };
     private mouseState = { left: false, right: false, middle: false };
-    
+
     // Performance tracking
     private lastFrameTime = 0;
     private currentFps = 60;
     private currentDeltaTime = 16.67;
-    
+
     // Per-effect custom params
     public effectParams: Record<string, Record<string, any>> = {};
     public onParamChange?: (effectId: string, key: string, value: any) => void;
@@ -66,13 +66,13 @@ export class EffectManager {
         this.players = {};
         this.keyBindings = {};
         this.heldKeys = new Set();
-        
+
         this.canvas = document.getElementById('global-effects-canvas') as HTMLCanvasElement;
         this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
-        
+
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
-        
+
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
 
@@ -92,14 +92,14 @@ export class EffectManager {
                             const ev = new CustomEvent('effect-meta-updated', { detail: { effectId, meta: newMeta } });
                             window.dispatchEvent(ev);
                         }
-                    } catch(e) {
+                    } catch (e) {
                         console.error('Failed to update meta on hot-reload', e);
                     }
                 }
             });
         }
     }
-    
+
     private resizeCanvas() {
         if (!this.canvas) return;
         this.canvas.width = window.innerWidth;
@@ -110,21 +110,21 @@ export class EffectManager {
         this.mousePos = { x, y };
         (window as any).currentMousePos = this.mousePos;
     }
-    
+
     public handleMouseDown(x: number, y: number, button: number) {
         this.updateMouse(x, y);
         if (button === 1) this.mouseState.left = true;
         else if (button === 2) this.mouseState.right = true;
         else if (button === 3) this.mouseState.middle = true;
     }
-    
+
     public handleMouseUp(x: number, y: number, button: number) {
         this.updateMouse(x, y);
         if (button === 1) this.mouseState.left = false;
         else if (button === 2) this.mouseState.right = false;
         else if (button === 3) this.mouseState.middle = false;
     }
-    
+
     public handleMouseWheel(x: number, y: number, dx: number, dy: number) {
         this.updateMouse(x, y);
     }
@@ -291,9 +291,7 @@ export class EffectManager {
     }
 
     private enforceFIFO() {
-        // Since we reduced poolSize to 1, maxN might just be how many keys we hold at once,
-        // but for global FIFO we limit active groups.
-        while (this.activeGroups.length > 20) { // arbitrary high limit
+        while (this.activeGroups.length > this.maxN) {
             const oldGroup = this.activeGroups.shift();
             if (oldGroup) oldGroup.stopAll();
         }
@@ -318,7 +316,7 @@ export class EffectManager {
         }
         return foundAndStopped;
     }
-    
+
     private getEnv(effectId?: string) {
         return {
             screenSize: { width: window.innerWidth, height: window.innerHeight },
@@ -328,13 +326,13 @@ export class EffectManager {
             params: effectId ? (this.effectParams[effectId] || {}) : {}
         };
     }
-    
+
     private renderLoop(timestamp: number) {
         if (!this.ctx || !this.canvas) {
             requestAnimationFrame(this.renderLoop);
             return;
         }
-        
+
         // FPS tracking
         if (this.lastFrameTime > 0) {
             this.currentDeltaTime = timestamp - this.lastFrameTime;
@@ -342,21 +340,21 @@ export class EffectManager {
             this.currentFps = this.currentFps * 0.9 + instantFps * 0.1; // EMA smoothing
         }
         this.lastFrameTime = timestamp;
-        
+
         // Clear entire canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Clean up inactive groups
         this.activeGroups = this.activeGroups.filter(g => g.entries.some(e => e.instance.active || e.instance.releasing));
-        
+
         const env = this.getEnv();
-        
+
         // Render all active instances
         for (const group of this.activeGroups) {
             for (const entry of group.entries) {
                 if (entry.instance.active || entry.instance.releasing) {
                     const type = entry.player.meta.mediatype;
-                    
+
                     if (type === 'image' || type === 'video') {
                         if (entry.instance.mediaEl) {
                             this.ctx.drawImage(entry.instance.mediaEl as CanvasImageSource, 0, 0, this.canvas.width, this.canvas.height);
@@ -373,7 +371,7 @@ export class EffectManager {
                 }
             }
         }
-        
+
         requestAnimationFrame(this.renderLoop);
     }
 }
