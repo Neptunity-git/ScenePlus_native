@@ -13,7 +13,7 @@
 [![Runtime](https://img.shields.io/badge/Bun-Fast-f472b6.svg)](https://bun.sh/)
 [![License](https://img.shields.io/badge/license-ISC-green.svg)](LICENSE)
 
-[ダウンロード (Releases)](https://github.com/Neptunity-git/ScenePlus_native/releases) • [クリエイターズガイド](開発資料/Official_Creators_Guide.md) • [要件定義・構想](開発資料/「ScenePlus+」要件定義書.md)
+[ダウンロード (Releases)](https://github.com/Neptunity-git/ScenePlus_native/releases) • [クリエイターズガイド](assets/docs/Official_Guide_For_Creators.md) • [要件定義・構想](開発資料/「ScenePlus+」要件定義書.md)
 
 </div>
 
@@ -83,7 +83,7 @@ my_effect.scenefx (またはフォルダ)
 }
 ```
 
-- 詳細な仕様や JavaScript コードによる自作エフェクトの作り方は、[Official Creators Guide](開発資料/Official_Creators_Guide.md) をご覧ください。
+- 詳細な仕様や JavaScript コードによる自作エフェクトの作り方は、[Official Creators Guide](assets/docs/Official_Guide_For_Creators.md) をご覧ください。
 
 ---
 
