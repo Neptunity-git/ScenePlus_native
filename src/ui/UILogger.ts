@@ -11,13 +11,6 @@ function timestamp(): string {
     return `${padded(d.getHours())}:${padded(d.getMinutes())}:${padded(d.getSeconds())}`;
 }
 
-export function getKeyLabel(keyCode: number): string {
-    for (const [char, code] of Object.entries(APP_KEYS_TO_UIOHOOK)) {
-        if (code === keyCode) return char;
-    }
-    return String(keyCode);
-}
-
 export function uiLog(message: string, type: string = 'default'): void {
     const container = document.getElementById('console-log');
     if (!container) return;
@@ -42,24 +35,6 @@ export function uiLog(message: string, type: string = 'default'): void {
 
     while (container.children.length > MAX_LOG_ENTRIES) {
         if (container.firstChild) container.removeChild(container.firstChild);
-    }
-}
-
-export function markLogUnread(): void {
-    const container = document.getElementById('console-log');
-    if (!container) return;
-
-    const existing = container.querySelector('.log-unread-separator');
-    if (existing) existing.remove();
-
-    const sep = document.createElement('div');
-    sep.className = 'log-unread-separator';
-    sep.textContent = '--- UNREAD ---';
-    container.appendChild(sep);
-
-    const panelBody = container.parentElement;
-    if (panelBody) {
-        panelBody.scrollTop = panelBody.scrollHeight;
     }
 }
 
