@@ -179,14 +179,6 @@ let settingsOpen = false;
 const offIndicator = document.getElementById('off-indicator');
 const settingsPanel = document.getElementById('settings-panel');
 
-export function toggleEngine() {
-    window.api.setAppState({ engineOn: !engineOn });
-}
-
-export function toggleSettings() {
-    window.api.setAppState({ settingsOpen: !settingsOpen });
-}
-
 window.api.onStateChanged((state: any) => {
     engineOn = state.engineOn;
     settingsOpen = state.settingsOpen;
